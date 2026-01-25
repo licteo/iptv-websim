@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="IPTV Player" />
+  <meta name="theme-color" content="#00d4ff" />
+  <title>Reproductor IPTV</title>
+
+  <style>
+    :root{--bg:#0f1720;--card:#141922;--muted:#9aa4af;--accent:#00d4ff;--danger:#ff4444}
+    *{box-sizing:border-box;font-family:system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial}
+    html,body{height:100%;margin:0;background:linear-gradient(180deg,#051019 0%, #071424 100%);color:#e6eef6}
+    .container{max-width:980px;margin:18px auto;padding:18px}
+    h1{margin:0 0 12px 0;font-size:20px;text-align:center;color:var(--accent)}
+    .input-section{display:flex;gap:8px;margin:8px 0;flex-wrap:wrap}
+    input[type="text"]{flex:1;padding:10px 12px;border-radius:8px;border:1px solid #22303a;background:#0b1115;color:#e6eef6}
+    .file-input{padding:8px}
+    button{background:var(--accent);color:#002;border:none;padding:10px 12px;border-radius:8px;cursor:pointer}
+    .btn-secondary{background:#2b3940;color:#e6eef6}
+    .btn-danger{background:var(--danger)}
+    .search-container{flex:1;display:flex;align-items:center;gap:6px}
+    .search-input{flex:1;padding:8px;border-radius:8px;border:1px solid #22303a;background:#071018;color:#e6eef6}
+    .favorites-toggle{display:flex;align-items:center;gap:6px;color:var(--muted)}
+    .channel-list{margin-top:10px;background:linear-gradient(180deg,#071018,#061014);border-radius:10px;padding:8px;min-height:80px;max-height:240px;overflow:auto;border:1px solid #16202a}
+    .channel-item{padding:10px;border-radius:8px;background:transparent;border:1px solid transparent;display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;cursor:pointer}
+    .channel-item:hover{background:#081118;border-color:#16313d}
+    .star{background:transparent;border:0;color:var(--muted);font-size:18px;cursor:pointer}
+    .video-container{margin-top:12px;background:var(--card);padding:8px;border-radius:10px;border:1px solid #16202a}
+    video, iframe{width:100%;height:360px;border-radius:6px;background:black}
+    .channel-controls{display:flex;gap:8px;align-items:center;margin-top:8px;justify-content:center}
+    .channel-btn{padding:8px 12px;border-radius:6px;border:0;background:#0b1318;color:#dfeafb;cursor:pointer}
+    .current-channel-info{color:var(--muted);font-size:14px}
+    .loading{position:relative;text-align:center;color:var(--muted);padding:6px;font-size:14px}
+    .empty-message{color:var(--muted);margin:12px 0;text-align:center}
+    @media (max-width:640px){video, iframe{height:220px}}
+  </style>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "hls.js": "https://esm.sh/hls.js@1.4.12"
+    }
+  }
+  </script>
+</head>
+<body>
+  <div class="container">
+    <h1>Reproductor IPTV</h1>
+
+    <div class="input-section">
+      <input id="channelUrl" type="text" placeholder="Pega la URL del canal (.m3u8, mp4, youtube...)" />
+      <button id="loadChannel">Cargar Canal</button>
+    </div>
+
+    <div class="input-section">
+      <input id="m3uFile" type="file" accept=".m3u,.m3u8" class="file-input" />
+      <button id="loadList" class="btn-secondary">Cargar Lista M3U</button>
+      <button id="clearList" class="btn-danger">Limpiar Lista</button>
+    </div>
+
+    <div class="input-section">
+      <div class="search-container">
+        <input id="searchInput" class="search-input" placeholder="Buscar canal..." />
+      </div>
+      <label class="favorites-toggle">
+        <input id="favoritesToggle" type="checkbox" />
+        <span class="toggle-label">★ Solo Favoritos</span>
+      </label>
+    </div>
+
+    <div id="channelList" class="channel-list">
+      <p class="empty-message">No hay canales cargados</p>
+    </div>
+
+    <div class="video-container" id="playerArea">
+      <div id="playerRoot">
+        <video id="videoPlayer" controls playsinline webkit-playsinline></video>
+      </div>
+      <div id="loading" class="loading" style="display:none">Cargando...</div>
+
+      <div class="channel-controls">
+        <button id="prevChannel" class="channel-btn">◀ Anterior</button>
+        <button id="favoriteCurrent" class="channel-btn" title="Marcar como favorito">★</button>
+        <span id="currentChannelInfo" class="current-channel-info"></span>
+        <button id="nextChannel" class="channel-btn">Siguiente ▶</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import Hls from "hls.js";
+
+    // Estado
+    const state = {
+      channels: [], // {title, url, favorite}
+      currentIndex: -1
+    };
+
+    // Elementos
+    const channelUrl = document.getElementById('channelUrl');
+    const loadChannelBtn = document.getElementById('loadChannel');
+    const m3uFile = document.getElementById('m3uFile');
+    const loadListBtn = document.getElementById('loadList');
+    const clearListBtn = document.getElementById('clearList');
+    const channelList = document.getElementById('channelList');
+    const searchInput = document.getElementById('searchInput');
+    const favoritesToggle = document.getElementById('favoritesToggle');
+    const videoPlayer = document.getElementById('videoPlayer');
+    const playerRoot = document.getElementById('playerRoot');
+    const loading = document.getElementById('loading');
+    const prevChannelBtn = document.getElementById('prevChannel');
+    const nextChannelBtn = document.getElementById('nextChannel');
+    const favoriteCurrentBtn = document.getElementById('favoriteCurrent');
+    const currentChannelInfo = document.getElementById('currentChannelInfo');
+
+    let hls = null;
+
+    // ----------------- Utilities -----------------
+    function showLoading(show=true){ loading.style.display = show ? 'block' : 'none' }
+    function isYouTube(url){
+      try{
+        const u = new URL(url);
+        return u.hostname.includes('youtube.com') || u.hostname.includes('youtu.be');
+      }catch(e){
+        return /youtu\.be|youtube\.com/.test(url);
+      }
+    }
+    function isHls(url){
+      return /\.m3u8($|\?)/i.test(url) || url.includes('.m3u8');
+    }
+    function canVideoPlay(url){
+      // basic check for mp4/webm
+      return /\.(mp4|webm|ogg)(\?.*)?$/i.test(url);
+    }
+
+    // ----------------- Channel list rendering -----------------
+    function saveStateToLocal(){
+      localStorage.setItem('iptv_channels_v1', JSON.stringify(state.channels));
+    }
+    function loadStateFromLocal(){
+      const raw = localStorage.getItem('iptv_channels_v1');
+      if(raw) {
+        try{ state.channels = JSON.parse(raw); } catch(e){ state.channels = [] }
+      }
+    }
+
+    function renderList(){
+      const q = (searchInput.value||'').toLowerCase().trim();
+      const onlyFav = favoritesToggle.checked;
+      channelList.innerHTML = '';
+      const filtered = state.channels.filter(c=>{
+        if(onlyFav && !c.favorite) return false;
+        if(q && !(c.title||'').toLowerCase().includes(q) && !(c.url||'').toLowerCase().includes(q)) return false;
+        return true;
+      });
+      if(filtered.length===0){
+        channelList.innerHTML = '<p class="empty-message">No hay canales cargados</p>';
+        return;
+      }
+      filtered.forEach((ch, idx)=>{
+        const item = document.createElement('div');
+        item.className = 'channel-item';
+        item.onclick = () => { const realIndex = state.channels.indexOf(ch); playIndex(realIndex); };
+        const left = document.createElement('div');
+        left.innerHTML = `<strong style="display:block">${ch.title||ch.url}</strong><small style="color:var(--muted)">${ch.url}</small>`;
+        const right = document.createElement('div');
+        const star = document.createElement('button');
+        star.className = 'star';
+        star.innerText = ch.favorite ? '★' : '☆';
+        star.title = ch.favorite ? 'Quitar favorito' : 'Agregar favorito';
+        star.onclick = (e) => { e.stopPropagation(); ch.favorite = !ch.favorite; star.innerText = ch.favorite ? '★' : '☆'; saveStateToLocal(); renderList(); };
+        right.appendChild(star);
+        item.appendChild(left);
+        item.appendChild(right);
+        channelList.appendChild(item);
+      });
+    }
+
+    // ----------------- Play logic -----------------
+    async function attachHls(url){
+      if(hls){ hls.destroy(); hls = null; }
+      if (Hls.isSupported()) {
+        hls = new Hls();
+        hls.loadSource(url);
+        hls.attachMedia(videoPlayer);
+        return new Promise((res, rej)=>{
+          const onMediaAttached = () => {
+            hls.on(Hls.Events.MANIFEST_PARSED, () => res());
+            hls.on(Hls.Events.ERROR, (event, data) => {
+              console.warn('HLS error', data);
+              // continue normally, let player try fallback
+            });
+          };
+          onMediaAttached();
+        });
+      } else if (videoPlayer.canPlayType('application/vnd.apple.mpegurl')) {
+        videoPlayer.src = url;
+        return Promise.resolve();
+      } else {
+        return Promise.reject(new Error('HLS no soportado por este navegador.'));
+      }
+    }
+
+    function embedYouTube(url){
+      // clear any existing video element & hls
+      if(hls){ hls.destroy(); hls = null; }
+      // remove existing node and create iframe
+      playerRoot.innerHTML = '';
+      const iframe = document.createElement('iframe');
+      iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
+      iframe.allowFullscreen = true;
+      // Normalize to embed URL
+      try{
+        const u = new URL(url);
+        let videoId = null;
+        if(u.hostname.includes('youtu.be')) videoId = u.pathname.slice(1);
+        if(u.hostname.includes('youtube.com')){
+          const p = u.searchParams.get('v');
+          if(p) videoId = p;
+          // playlist or embed links could be passed directly; accept /embed/...
+          if(!videoId && u.pathname.startsWith('/embed/')) videoId = u.pathname.split('/embed/')[1];
+        }
+        if(videoId) iframe.src = `https://www.youtube-nocookie.com/embed/${videoId}?rel=0&autoplay=1`;
+        else {
+          // fallback: use URL inside an allowfullscreen iframe (YouTube short links, playlists, or full page)
+          iframe.src = url;
+        }
+      }catch(e){
+        iframe.src = url;
+      }
+      playerRoot.appendChild(iframe);
+    }
+
+    // Generic page embed for non-media links (e.g. canaltro channel pages)
+    function embedGenericPage(url){
+      if(hls){ hls.destroy(); hls = null; }
+      playerRoot.innerHTML = '';
+      const iframe = document.createElement('iframe');
+      // Allow common features; keep sandbox minimal so third-party pages can run media
+      iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
+      iframe.allowFullscreen = true;
+      iframe.src = url;
+      iframe.style.border = '0';
+      iframe.style.width = '100%';
+      iframe.style.height = '100%';
+      playerRoot.appendChild(iframe);
+    }
+
+    async function playUrl(url){
+      showLoading(true);
+      currentChannelInfo.textContent = url;
+      // if url is youtube -> embed
+      if(isYouTube(url)){
+        try{
+          embedYouTube(url);
+        }finally{
+          showLoading(false);
+        }
+        return;
+      }
+      // else ensure we have a video element
+      playerRoot.innerHTML = '';
+      playerRoot.appendChild(videoPlayer);
+      videoPlayer.pause();
+      videoPlayer.removeAttribute('src');
+      videoPlayer.load();
+
+      try{
+        if(isHls(url)){
+          await attachHls(url);
+          // autoplay attempt:
+          try{ await videoPlayer.play(); }catch(e){}
+        } else if (canVideoPlay(url)){
+          videoPlayer.src = url;
+          try{ await videoPlayer.play(); }catch(e){}
+        } else {
+          // If it's not a direct media file, try embedding the page (useful for channels hosted on webpages)
+          embedGenericPage(url);
+        }
+      }catch(err){
+        console.error('Error reproduciendo:', err);
+        alert('No se pudo reproducir la URL en este reproductor. Intenta otra o abre en navegador compatible.');
+      } finally {
+        showLoading(false);
+      }
+    }
+
+    function playIndex(i){
+      if(i < 0 || i >= state.channels.length) return;
+      state.currentIndex = i;
+      const ch = state.channels[i];
+      currentChannelInfo.textContent = ch.title || ch.url;
+      playUrl(ch.url);
+      saveStateToLocal();
+      renderList();
+    }
+
+    function playNext(){
+      if(state.channels.length === 0) return;
+      const next = (state.currentIndex + 1) % state.channels.length;
+      playIndex(next);
+    }
+    function playPrev(){
+      if(state.channels.length === 0) return;
+      let prev = state.currentIndex - 1;
+      if(prev < 0) prev = state.channels.length - 1;
+      playIndex(prev);
+    }
+
+    // ----------------- M3U parsing -----------------
+    async function parseM3U(text){
+      // Very simple M3U parser: looks for #EXTINF lines for title and next line for url
+      const lines = text.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
+      const out = [];
+      for(let i=0;i<lines.length;i++){
+        const line = lines[i];
+        if(line.startsWith('#EXTINF')){
+          // try to extract title after comma
+          const comma = line.indexOf(',');
+          const title = comma >= 0 ? line.slice(comma+1).trim() : line;
+          // next non-comment non-empty line is URL
+          let j = i+1;
+          while(j < lines.length && lines[j].startsWith('#')) j++;
+          if(j < lines.length){
+            out.push({title: title || lines[j], url: lines[j], favorite:false});
+            i = j;
+          }
+        } else if(!line.startsWith('#') && (line.startsWith('http') || line.startsWith('/'))){
+          // bare url lines without extinf
+          out.push({title: line, url: line, favorite:false});
+        }
+      }
+      return out;
+    }
+
+    // ----------------- Events -----------------
+    loadChannelBtn.addEventListener('click', ()=>{
+      const url = (channelUrl.value||'').trim();
+      if(!url){ alert('Pega una URL válida'); return; }
+      // add to list
+      state.channels.push({title: url, url, favorite:false});
+      saveStateToLocal();
+      renderList();
+      playIndex(state.channels.length - 1);
+      channelUrl.value = '';
+    });
+
+    loadListBtn.addEventListener('click', async ()=>{
+      const file = m3uFile.files && m3uFile.files[0];
+      if(!file){ alert('Selecciona un archivo .m3u(o .m3u8)'); return; }
+      const text = await file.text();
+      const parsed = await parseM3U(text);
+      if(parsed.length === 0){ alert('No se encontraron entradas en la lista M3U'); return; }
+      state.channels = state.channels.concat(parsed);
+      saveStateToLocal();
+      renderList();
+      // auto play first of newly added
+      playIndex(state.channels.length - parsed.length);
+      m3uFile.value = '';
+    });
+
+    clearListBtn.addEventListener('click', ()=>{
+      if(!confirm('Deseas limpiar toda la lista de canales?')) return;
+      state.channels = [];
+      state.currentIndex = -1;
+      saveStateToLocal();
+      renderList();
+      // stop playback
+      if(hls){ hls.destroy(); hls = null; }
+      playerRoot.innerHTML = '';
+      playerRoot.appendChild(videoPlayer);
+      videoPlayer.pause();
+      videoPlayer.removeAttribute('src');
+      videoPlayer.load();
+      currentChannelInfo.textContent = '';
+    });
+
+    searchInput.addEventListener('input', renderList);
+    favoritesToggle.addEventListener('change', renderList);
+
+    nextChannelBtn.addEventListener('click', playNext);
+    prevChannelBtn.addEventListener('click', playPrev);
+    favoriteCurrentBtn.addEventListener('click', ()=>{
+      if(state.currentIndex < 0) return;
+      const ch = state.channels[state.currentIndex];
+      ch.favorite = !ch.favorite;
+      saveStateToLocal();
+      renderList();
+    });
+
+    // keyboard shortcuts: left/right for channels
+    window.addEventListener('keydown', (e)=>{
+      if(e.key === 'ArrowRight') playNext();
+      if(e.key === 'ArrowLeft') playPrev();
+    });
+
+    // try to load saved channels on startup
+    loadStateFromLocal();
+    renderList();
+
+    // If there is a channel param in URL (?url=...), auto-load it
+    (function autoLoadFromQuery(){
+      try{
+        const p = new URLSearchParams(location.search);
+        const u = p.get('url');
+        if(u){
+          state.channels.unshift({title:u, url:u, favorite:false});
+          saveStateToLocal();
+          renderList();
+          playIndex(0);
+        }
+      }catch(e){}
+    })();
+
+    // Basic service worker register (silent fail)
+    if('serviceWorker' in navigator){
+      navigator.serviceWorker.register('/sw.js').catch(()=>{/* ignore */});
+    }
+
+    // Ensure video element is present in playerRoot initially
+    playerRoot.appendChild(videoPlayer);
+  </script>
+</body>
+</html>
