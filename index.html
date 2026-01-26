@@ -3,114 +3,186 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover" />
-  <title>Shinacon VR Interactive Pro</title>
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="IPTV Player" />
+  <meta name="theme-color" content="#00d4ff" />
+  <title>Reproductor IPTV VR</title>
+
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
 
   <style>
-    html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; }
+    :root{--bg:#0f1720;--card:#141922;--muted:#9aa4af;--accent:#00d4ff;--danger:#ff4444}
+    *{box-sizing:border-box;font-family:system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial}
+    html,body{height:100%;margin:0;background:linear-gradient(180deg,#051019 0%, #071424 100%);color:#e6eef6; overflow-x: hidden;}
+    .container{max-width:980px;margin:18px auto;padding:18px}
+    h1{margin:0 0 12px 0;font-size:20px;text-align:center;color:var(--accent)}
+    .input-section{display:flex;gap:8px;margin:8px 0;flex-wrap:wrap}
+    input[type="text"]{flex:1;padding:10px 12px;border-radius:8px;border:1px solid #22303a;background:#0b1115;color:#e6eef6}
+    .file-input{padding:8px}
+    button{background:var(--accent);color:#002;border:none;padding:10px 12px;border-radius:8px;cursor:pointer; font-weight: bold;}
+    .btn-secondary{background:#2b3940;color:#e6eef6}
+    .btn-danger{background:var(--danger)}
+    .btn-vr{background: #ff00ff; color: white; box-shadow: 0 0 10px #ff00ff;}
     
-    /* Divisor fijo central mejorado */
-    .divisor-fijo {
-      position: absolute; left: 50%; top: 0; bottom: 0;
-      width: 2px; background: rgba(255, 255, 255, 0.6);
-      z-index: 20000; pointer-events: none; display: none;
-    }
-    .vr-mode .divisor-fijo { display: block; }
+    .channel-list{margin-top:10px;background:linear-gradient(180deg,#071018,#061014);border-radius:10px;padding:8px;min-height:80px;max-height:240px;overflow:auto;border:1px solid #16202a}
+    .channel-item{padding:10px;border-radius:8px;display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;cursor:pointer}
+    .channel-item:hover{background:#081118;}
+    
+    .player-shell{width:100%;height:320px;border-radius:6px;overflow:hidden;background:black;position:relative}
+    video, iframe{width:100%;height:100%;display:block;background:black;border:0}
 
-    #ui-inicial {
-      position: absolute; inset: 0; z-index: 20001;
-      background: #000; display: flex; align-items: center; justify-content: center;
+    /* CAPA VR (Oculta por defecto) */
+    #vr-layer { display: none; position: fixed; inset: 0; z-index: 99999; background: #000; }
+    
+    /* Línea divisoria fija para Shinacon */
+    .divisor-vr {
+      position: absolute; left: 50%; top: 0; bottom: 0;
+      width: 2px; background: rgba(255, 255, 255, 0.5);
+      z-index: 100; pointer-events: none;
     }
-    .caja { background: #111; padding: 25px; border-radius: 15px; border: 1px solid #00d4ff; width: 280px; text-align: center; color: white; }
-    input { width: 100%; padding: 12px; margin: 15px 0; border-radius: 5px; background: #222; color: #fff; border: none; }
-    button { width: 100%; padding: 15px; background: #00d4ff; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; }
+
+    @media (min-width:900px){ .player-shell{height:520px} }
   </style>
 
   <script type="importmap">
-    { "imports": { "hls.js": "https://esm.sh/hls.js@1.4.12" } }
+  { "imports": { "hls.js": "https://esm.sh/hls.js@1.4.12" } }
   </script>
 </head>
-<body class="vr-mode">
+<body>
 
-  <div class="divisor-fijo"></div>
+  <div id="vr-layer">
+    <div class="divisor-vr"></div>
+    <a-scene embedded loading-screen="enabled: false" vr-mode-ui="enabled: false">
+      <a-entity camera look-controls position="0 1.6 0">
+        <a-entity id="pantallas" position="0 0 -3.5">
+          <a-video id="vr-video-L" width="5.2" height="2.9" position="-2.65 0 0"></a-video>
+          <a-video id="vr-video-R" width="5.2" height="2.9" position="2.65 0 0"></a-video>
+          
+          <a-circle class="clickable" position="0 -1.8 0" radius="0.15" color="red" onclick="salirVR()">
+            <a-text value="SALIR" align="center" position="0 0 0.01" scale="0.4 0.4 0.4"></a-text>
+          </a-circle>
 
-  <div id="ui-inicial">
-    <div class="caja">
-      <h3 style="color:#00d4ff; margin:0;">SHINACON VR PRO</h3>
-      <input id="url" type="text" placeholder="URL .m3u8 o mp4">
-      <button onclick="activar()">ENTRAR AL CINE</button>
+          <a-entity cursor="fuse: true; fuseTimeout: 1000" raycaster="objects: .clickable"
+                    position="0 0 1" geometry="primitive: ring; radiusInner: 0.015; radiusOuter: 0.025"
+                    material="color: #00d4ff; shader: flat"></a-entity>
+        </a-entity>
+      </a-entity>
+      <a-sky color="#000"></a-sky>
+    </a-scene>
+  </div>
+
+  <div class="container" id="main-ui">
+    <h1>Reproductor IPTV VR</h1>
+
+    <div class="input-section">
+      <input id="channelUrl" type="text" placeholder="URL .m3u8, mp4..." />
+      <button id="loadChannel">Cargar</button>
+      <button onclick="entrarVR()" class="btn-vr">PANTALLA COMPLETA VR</button>
+    </div>
+
+    <div class="input-section">
+      <input id="m3uFile" type="file" accept=".m3u,.m3u8" class="file-input" />
+      <button id="loadList" class="btn-secondary">Cargar M3U</button>
+      <button id="clearList" class="btn-danger">Limpiar</button>
+    </div>
+
+    <div id="channelList" class="channel-list"></div>
+
+    <div class="video-container">
+      <div id="playerRoot" class="player-shell">
+        <video id="videoPlayer" controls playsinline webkit-playsinline></video>
+      </div>
+      <div class="channel-controls" style="display: flex; gap:10px; justify-content:center; margin-top:10px;">
+        <button id="prevChannel">◀</button>
+        <span id="currentChannelInfo" class="current-channel-info">Selecciona un canal</span>
+        <button id="nextChannel">▶</button>
+      </div>
     </div>
   </div>
 
-  <a-scene loading-screen="enabled: false" vr-mode-ui="enabled: false">
-    <a-assets>
-      <video id="videoAsset" autoplay crossorigin="anonymous" playsinline></video>
-      <img id="playImg" src="https://img.icons8.com/ios-filled/100/00d4ff/play.png">
-      <img id="pauseImg" src="https://img.icons8.com/ios-filled/100/00d4ff/pause.png">
-    </a-assets>
-
-    <a-entity camera look-controls position="0 1.6 0">
-      <a-entity id="hud" position="0 0 -3.5">
-        
-        <a-video src="#videoAsset" width="5.2" height="2.9" position="-2.65 0 0"></a-video>
-        <a-video src="#videoAsset" width="5.2" height="2.9" position="2.65 0 0"></a-video>
-
-        <a-image id="btn-play-izq" class="clickable" src="#pauseImg" 
-                 position="-2.65 -1.8 0" width="0.4" height="0.4"
-                 onclick="togglePlay()"></a-image>
-        
-        <a-image id="btn-play-der" class="clickable" src="#pauseImg" 
-                 position="2.65 -1.8 0" width="0.4" height="0.4"
-                 onclick="togglePlay()"></a-image>
-
-        <a-entity cursor="fuse: true; fuseTimeout: 1000"
-                  raycaster="objects: .clickable"
-                  position="0 0 1"
-                  geometry="primitive: ring; radiusInner: 0.015; radiusOuter: 0.025"
-                  material="color: #00d4ff; shader: flat">
-        </a-entity>
-
-      </a-entity>
-    </a-entity>
-
-    <a-sky color="#000"></a-sky>
-  </a-scene>
-
   <script type="module">
     import Hls from "hls.js";
-    const v = document.getElementById('videoAsset');
-    const hls = new Hls();
 
-    window.activar = function() {
-      const link = document.getElementById('url').value.trim();
-      if(!link) return;
+    const state = { channels: [], currentIndex: -1 };
+    const v = document.getElementById('videoPlayer');
+    const vrL = document.getElementById('vr-video-L');
+    const vrR = document.getElementById('vr-video-R');
+    let hls = null;
 
-      if (Hls.isSupported() && link.includes(".m3u8")) {
-        hls.loadSource(link);
-        hls.attachMedia(v);
-        v.play();
-      } else {
-        v.src = link;
-        v.play();
-      }
-
-      document.getElementById('ui-inicial').style.display = 'none';
+    // --- FUNCIONES VR ---
+    window.entrarVR = function() {
+      if(!v.src && !v.querySelector('source')) { alert("Primero carga un canal"); return; }
+      document.getElementById('vr-layer').style.display = 'block';
+      document.getElementById('main-ui').style.display = 'none';
       
-      // FORZAR PANTALLA COMPLETA TOTAL
+      // Vinculamos el video del reproductor a las pantallas VR
+      vrL.setAttribute('src', '#videoPlayer');
+      vrR.setAttribute('src', '#videoPlayer');
+      
       const el = document.documentElement;
       if (el.requestFullscreen) el.requestFullscreen();
+      if (screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(()=>{});
+    };
+
+    window.salirVR = function() {
+      document.getElementById('vr-layer').style.display = 'none';
+      document.getElementById('main-ui').style.display = 'block';
+      if (document.exitFullscreen) document.exitFullscreen();
+    };
+
+    // --- LÓGICA IPTV ORIGINAL ---
+    async function playUrl(url){
+      if(hls){ hls.destroy(); hls = null; }
+      if(url.includes('.m3u8')){
+        if (Hls.isSupported()) {
+          hls = new Hls(); hls.loadSource(url); hls.attachMedia(v);
+          hls.on(Hls.Events.MANIFEST_PARSED, () => v.play());
+        } else { v.src = url; v.play(); }
+      } else { v.src = url; v.play(); }
     }
 
-    // Lógica para pausar/reproducir con la mirada
-    window.togglePlay = function() {
-      const btns = [document.getElementById('btn-play-izq'), document.getElementById('btn-play-der')];
-      if (v.paused) {
-        v.play();
-        btns.forEach(b => b.setAttribute('src', '#pauseImg'));
-      } else {
-        v.pause();
-        btns.forEach(b => b.setAttribute('src', '#playImg'));
-      }
+    function renderList(){
+      const list = document.getElementById('channelList');
+      list.innerHTML = '';
+      state.channels.forEach((ch, idx) => {
+        const div = document.createElement('div');
+        div.className = 'channel-item';
+        div.innerHTML = `<span>${ch.title}</span>`;
+        div.onclick = () => { state.currentIndex = idx; playUrl(ch.url); };
+        list.appendChild(div);
+      });
+    }
+
+    document.getElementById('loadChannel').onclick = () => {
+      const url = document.getElementById('channelUrl').value;
+      state.channels.push({title: "Canal Manual", url: url});
+      renderList(); playUrl(url);
+    };
+
+    document.getElementById('loadList').onclick = async () => {
+      const file = document.getElementById('m3uFile').files[0];
+      if(!file) return;
+      const text = await file.text();
+      const lines = text.split('\n');
+      lines.forEach((line, i) => {
+        if(line.startsWith('#EXTINF')){
+          const title = line.split(',')[1] || "Canal";
+          state.channels.push({title: title, url: lines[i+1].trim()});
+        }
+      });
+      renderList();
+    };
+
+    document.getElementById('nextChannel').onclick = () => {
+      state.currentIndex = (state.currentIndex + 1) % state.channels.length;
+      playUrl(state.channels[state.currentIndex].url);
+    };
+
+    document.getElementById('prevChannel').onclick = () => {
+      state.currentIndex = (state.currentIndex - 1 + state.channels.length) % state.channels.length;
+      playUrl(state.channels[state.currentIndex].url);
     };
   </script>
 </body>
