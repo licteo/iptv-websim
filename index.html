@@ -3,29 +3,31 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no" />
-  <title>IPTV VR Fixed Cinema</title>
+  <title>Cine VR Pro</title>
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
 
   <style>
-    :root{--accent:#00d4ff;--bg:#000}
-    body{margin:0;background:var(--bg);overflow:hidden;font-family:sans-serif}
+    body { margin: 0; overflow: hidden; background: #000; }
     
-    .ui-panel {
-      position: absolute; top: 20px; left: 20px; z-index: 1000;
-      background: rgba(10, 15, 25, 0.9); padding: 20px; border-radius: 12px;
-      border: 1px solid var(--accent); width: 280px; transition: 0.5s;
+    /* Panel de control inicial */
+    #ui {
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      z-index: 1000; background: rgba(0,0,0,0.9); padding: 20px;
+      border-radius: 15px; border: 2px solid #00d4ff; text-align: center;
+      width: 280px; transition: 0.5s;
     }
-    .hidden { opacity: 0; pointer-events: none; transform: translateY(-20px); }
-    
-    input { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 6px; border: 1px solid #333; background: #000; color: white; box-sizing: border-box; }
-    button { width: 100%; padding: 15px; background: var(--accent); color: #000; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
+    .hidden { display: none !important; }
 
-    /* Línea guía central */
-    .guide-line {
+    input { width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; border: none; }
+    button { width: 100%; padding: 15px; background: #00d4ff; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+
+    /* Línea central de centrado (Igual a tu captura) */
+    .linea-centro {
       position: absolute; left: 50%; top: 0; bottom: 0;
-      width: 2px; background: rgba(255,255,255,0.3); z-index: 100;
-      pointer-events: none;
+      width: 2px; background: rgba(255,255,255,0.5); z-index: 999;
+      pointer-events: none; display: none;
     }
+    .vr-mode .linea-centro { display: block; }
   </style>
 
   <script type="importmap">
@@ -34,28 +36,31 @@
 </head>
 <body>
 
-  <div class="guide-line"></div>
-
-  <div class="ui-panel" id="controls">
-    <h3 style="margin:0 0 10px 0; color:var(--accent)">VR Cinema Pro</h3>
-    <input id="videoUrl" type="text" placeholder="URL .m3u8 o mp4">
-    <button onclick="comenzarVR()">ENTRAR AL CINE VR</button>
+  <div id="ui">
+    <h2 style="color:#00d4ff; margin:0;">IPTV VR CINEMA</h2>
+    <input id="url" type="text" placeholder="Pega link .m3u8 o mp4">
+    <button onclick="iniciarCine()">INICIAR CINE VR</button>
   </div>
 
-  <a-scene embedded loading-screen="enabled: false" device-orientation-permission-ui="enabled: true">
+  <div class="linea-centro" id="guia"></div>
+
+  <a-scene id="escena" embedded loading-screen="enabled: false" device-orientation-permission-ui="enabled: true">
     <a-assets>
-      <video id="stream" autoplay crossorigin="anonymous" playsinline></video>
+      <video id="video" autoplay crossorigin="anonymous" playsinline></video>
     </a-assets>
 
-    <a-entity id="cinema-screen" position="0 1.6 -6">
-        <a-video src="#stream" width="6.5" height="3.6" position="-3.4 0 0" rotation="0 2 0"></a-video>
-        <a-video src="#stream" width="6.5" height="3.6" position="3.4 0 0" rotation="0 -2 0"></a-video>
+    <a-entity id="pantallas-contenedor" position="0 1.6 -4">
+      <a-video src="#video" width="4" height="2.25" position="-2.1 0 0" rotation="0 10 0" 
+               geometry="primitive: plane; segmentsHeight: 20; segmentsWidth: 20;"></a-video>
+      
+      <a-video src="#video" width="4" height="2.25" position="2.1 0 0" rotation="0 -10 0"
+               geometry="primitive: plane; segmentsHeight: 20; segmentsWidth: 20;"></a-video>
     </a-entity>
 
     <a-entity camera look-controls position="0 1.6 0">
-      <a-entity cursor="fuse: true; fuseTimeout: 2000"
+      <a-entity cursor="fuse: true; fuseTimeout: 1500"
                 position="0 0 -1"
-                geometry="primitive: ring; radiusInner: 0.015; radiusOuter: 0.02"
+                geometry="primitive: ring; radiusInner: 0.01; radiusOuter: 0.015"
                 material="color: #00d4ff; shader: flat">
       </a-entity>
     </a-entity>
@@ -65,12 +70,11 @@
 
   <script type="module">
     import Hls from "hls.js";
-    const v = document.getElementById('stream');
-    const panel = document.getElementById('controls');
+    const v = document.getElementById('video');
     const hls = new Hls();
 
-    window.comenzarVR = function() {
-      const url = document.getElementById('videoUrl').value.trim();
+    window.iniciarCine = function() {
+      const url = document.getElementById('url').value.trim();
       if(!url) return;
 
       if (Hls.isSupported() && url.includes(".m3u8")) {
@@ -82,15 +86,19 @@
         v.play();
       }
 
-      // Pantalla completa
+      // 1. Ocultar Menú y mostrar guía
+      document.getElementById('ui').classList.add('hidden');
+      document.getElementById('guia').style.display = 'block';
+      document.body.classList.add('vr-mode');
+
+      // 2. Pantalla Completa Horizonal
       const el = document.documentElement;
       if (el.requestFullscreen) el.requestFullscreen();
-
-      panel.classList.add('hidden');
+      
+      // 3. Forzar refresco de cámara para que detecte el giroscopio
+      const scene = document.querySelector('a-scene');
+      scene.play();
     }
-
-    // Doble clic para volver a ver el menú
-    document.body.addEventListener('dblclick', () => panel.classList.toggle('hidden'));
   </script>
 </body>
 </html>
