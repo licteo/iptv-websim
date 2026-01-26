@@ -25,6 +25,15 @@
     .btn-secondary{background:#2b3940;color:#e6eef6}
     .btn-danger{background:var(--danger)}
     .btn-vr{background:#ff00ff; color:#fff; font-weight:bold; box-shadow:0 0 10px #ff00ff}
+    
+    /* BOTÓN PARA SALIR DE VR */
+    #btn-exit-vr {
+      display: none; position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+      z-index: 1000; background: var(--danger); color: white; padding: 10px 20px;
+      border-radius: 20px; font-weight: bold; border: 2px solid white;
+    }
+    body.is-vr #btn-exit-vr { display: block; }
+
     .search-container{flex:1;display:flex;align-items:center;gap:6px}
     .search-input{flex:1;padding:8px;border-radius:8px;border:1px solid #22303a;background:#071018;color:#e6eef6}
     .favorites-toggle{display:flex;align-items:center;gap:6px;color:var(--muted)}
@@ -34,17 +43,15 @@
     .star{background:transparent;border:0;color:var(--muted);font-size:18px;cursor:pointer}
     .video-container{margin-top:12px;background:var(--card);padding:8px;border-radius:10px;border:1px solid #16202a; position:relative;}
     
-    /* EL SECRETO PARA EL CLIC: Video interactivo con opacidad baja en modo VR */
     .player-shell{width:100%;height:520px;border-radius:6px;overflow:hidden;background:black;display:block; position:relative;}
     video, iframe{width:100%;height:100%;display:block;border-radius:6px;background:black;border:0}
     
-    /* Ajustes para VR */
     body.is-vr .container { display: none; }
     #vr-layer { display: none; position: fixed; inset: 0; z-index: 10; background: #000; }
     body.is-vr #vr-layer { display: block; }
     body.is-vr .player-shell { 
       position: fixed; inset: 0; width: 100vw; height: 100vh; 
-      z-index: 100; opacity: 0.1; /* Permite ver el VR pero recibe los clics */
+      z-index: 100; opacity: 0.1;
     }
     .divisor-fijo {
       position: absolute; left: 50%; top: 0; bottom: 0; width: 2px;
@@ -66,6 +73,8 @@
   </script>
 </head>
 <body>
+
+  <button id="btn-exit-vr" onclick="toggleVR()">CERRAR MODO VR</button>
 
   <div id="vr-layer">
     <div class="divisor-fijo"></div>
@@ -127,7 +136,6 @@
   <script type="module">
     import Hls from "hls.js";
 
-    // --- NUEVA LÓGICA VR ---
     window.toggleVR = function() {
       const isVr = document.body.classList.toggle('is-vr');
       if (isVr) {
@@ -137,12 +145,10 @@
       }
     };
 
-    // Salir de VR con la tecla Escape
     window.addEventListener('keydown', (e) => {
       if(e.key === 'Escape' && document.body.classList.contains('is-vr')) toggleVR();
     });
 
-    // --- TU LÓGICA ORIGINAL (SIN CAMBIOS) ---
     const state = { channels: [], currentIndex: -1 };
     const channelUrl = document.getElementById('channelUrl');
     const loadChannelBtn = document.getElementById('loadChannel');
@@ -207,7 +213,6 @@
       showLoading(true);
       currentChannelInfo.textContent = url;
       if(isYouTube(url)){
-        // (Lógica YouTube original)
         playerRoot.innerHTML = '';
         const iframe = document.createElement('iframe');
         iframe.allowFullscreen = true;
