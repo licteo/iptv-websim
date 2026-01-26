@@ -3,125 +3,107 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover" />
-  <title>IPTV VR - Control Físico</title>
+  <title>Shinacon IPTV Ultra Control</title>
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
   <style>
-    /* Estilos base del reproductor */
-    :root{--bg:#0f1720;--card:#141922;--muted:#9aa4af;--accent:#00d4ff;--danger:#ff4444}
-    *{box-sizing:border-box;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial}
-    html,body{height:100%;margin:0;background:#051019;color:#e6eef6;overflow:hidden}
-    .container{max-width:980px;margin:18px auto;padding:18px}
-    h1{margin:0 0 12px 0;font-size:20px;text-align:center;color:var(--accent)}
-    .input-section{display:flex;gap:8px;margin:8px 0;flex-wrap:wrap}
-    input[type="text"]{flex:1;padding:10px 12px;border-radius:8px;border:1px solid #22303a;background:#0b1115;color:#e6eef6}
-    button{background:var(--accent);color:#002;border:none;padding:10px 12px;border-radius:8px;cursor:pointer;font-weight:bold}
-    .btn-vr{background:#ff00ff;color:white;box-shadow:0 0 10px #ff00ff}
-    .channel-list{margin-top:10px;background:#071018;border-radius:10px;padding:8px;max-height:200px;overflow:auto;border:1px solid #16202a}
-    .channel-item{padding:10px;border-radius:8px;margin-bottom:6px;cursor:pointer;border:1px solid transparent}
-    .channel-item:hover{background:#081118;border-color:var(--accent)}
-    .player-shell{width:100%;height:320px;border-radius:6px;overflow:hidden;background:black;position:relative;margin-top:15px}
-    video{width:100%;height:100%;display:block}
-
-    /* CAPA VR */
-    #vr-layer { display: none; position: fixed; inset: 0; z-index: 99999; background: #000; }
-    .divisor-vr { position: absolute; left: 50%; top: 0; bottom: 0; width: 2px; background: rgba(255,255,255,0.4); z-index: 100; pointer-events: none; }
+    :root{--accent:#00d4ff}
+    html,body{height:100%;margin:0;background:#000;color:#fff;overflow:hidden;font-family:sans-serif}
+    .container{padding:20px;max-width:800px;margin:auto}
+    #vr-layer{display:none;position:fixed;inset:0;z-index:9999}
+    .divisor-vr{position:absolute;left:50%;top:0;bottom:0;width:2px;background:rgba(255,255,255,0.3);z-index:100;pointer-events:none}
+    button{background:var(--accent);border:none;padding:12px;border-radius:8px;font-weight:bold;cursor:pointer}
+    input{padding:10px;border-radius:8px;border:1px solid #333;background:#111;color:#fff;width:60%}
+    .player-preview{width:100%;height:200px;background:#111;margin-top:20px;border-radius:10px}
   </style>
-  <script type="importmap"> { "imports": { "hls.js": "https://esm.sh/hls.js@1.4.12" } } </script>
+  <script type="importmap">{"imports":{"hls.js":"https://esm.sh/hls.js@1.4.12"}}</script>
 </head>
 <body>
 
   <div id="vr-layer">
     <div class="divisor-vr"></div>
-    <a-scene embedded loading-screen="enabled: false" vr-mode-ui="enabled: false">
-      <a-entity camera look-controls position="0 1.6 0">
-        <a-entity id="pantallas-vr" position="0 0 -3.5">
-          <a-video id="vr-L" width="5.2" height="2.9" position="-2.65 0 0"></a-video>
-          <a-video id="vr-R" width="5.2" height="2.9" position="2.65 0 0"></a-video>
-          
-          <a-circle class="clickable" id="btn-salir" position="0 -1.8 0" radius="0.18" color="#ff4444" onclick="salirVR()">
-            <a-text value="SALIR" align="center" position="0 0 0.02" scale="0.5 0.5 0.5" color="white"></a-text>
-          </a-circle>
+    <a-scene embedded loading-screen="enabled:false" vr-mode-ui="enabled:false">
+      <a-assets>
+        <video id="videoVr" crossorigin="anonymous" playsinline></video>
+        <img id="icon-play" src="https://img.icons8.com/ios-filled/100/ffffff/play.png">
+        <img id="icon-pause" src="https://img.icons8.com/ios-filled/100/ffffff/pause.png">
+        <img id="icon-vol-up" src="https://img.icons8.com/ios-filled/100/ffffff/volume-up.png">
+        <img id="icon-vol-down" src="https://img.icons8.com/ios-filled/100/ffffff/volume-low.png">
+      </a-assets>
 
-          <a-entity cursor="fuse: true; fuseTimeout: 1000"
-                    raycaster="objects: .clickable"
-                    position="0 0 1"
-                    geometry="primitive: ring; radiusInner: 0.015; radiusOuter: 0.025"
-                    material="color: #00d4ff; shader: flat"
-                    animation__click="property: scale; startEvents: click; from: 0.1 0.1 0.1; to: 1 1 1; dur: 150">
+      <a-entity camera look-controls position="0 1.6 0">
+        <a-entity id="main-panel" position="0 0 -3.5">
+          <a-video src="#videoVr" width="5.2" height="2.9" position="-2.65 0.2 0"></a-video>
+          <a-video src="#videoVr" width="5.2" height="2.9" position="2.65 0.2 0"></a-video>
+
+          <a-entity id="controls-left" position="-2.65 -1.6 0">
+            <a-image class="clickable" src="#icon-vol-down" position="-0.8 0 0" width="0.3" height="0.3" onclick="volDown()"></a-image>
+            <a-image id="play-pause-L" class="clickable" src="#icon-pause" position="0 0 0" width="0.4" height="0.4" onclick="togglePlay()"></a-image>
+            <a-image class="clickable" src="#icon-vol-up" position="0.8 0 0" width="0.3" height="0.3" onclick="volUp()"></a-image>
+            <a-text value="SALIR" position="0 -0.5 0" align="center" class="clickable" scale="0.5 0.5 0.5" onclick="salirVR()"></a-text>
           </a-entity>
+
+          <a-entity id="controls-right" position="2.65 -1.6 0">
+            <a-image class="clickable" src="#icon-vol-down" position="-0.8 0 0" width="0.3" height="0.3" onclick="volDown()"></a-image>
+            <a-image id="play-pause-R" class="clickable" src="#icon-pause" position="0 0 0" width="0.4" height="0.4" onclick="togglePlay()"></a-image>
+            <a-image class="clickable" src="#icon-vol-up" position="0.8 0 0" width="0.3" height="0.3" onclick="volUp()"></a-image>
+            <a-text value="SALIR" position="0 -0.5 0" align="center" class="clickable" scale="0.5 0.5 0.5" onclick="salirVR()"></a-text>
+          </a-entity>
+
+          <a-entity cursor="fuse:true; fuseTimeout:1000" raycaster="objects:.clickable"
+                    position="0 0 1" geometry="primitive:ring; radiusInner:0.015; radiusOuter:0.025"
+                    material="color:#00d4ff; shader:flat"></a-entity>
         </a-entity>
       </a-entity>
       <a-sky color="#000"></a-sky>
     </a-scene>
   </div>
 
-  <div class="container" id="main-ui">
-    <h1>Reproductor IPTV VR</h1>
-    <div class="input-section">
-      <input id="channelUrl" type="text" placeholder="URL del canal..." />
-      <button id="loadChannel">Cargar</button>
-      <button onclick="entrarVR()" class="btn-vr">MODO VR</button>
-    </div>
-    <div id="channelList" class="channel-list"></div>
-    <div class="player-shell">
-      <video id="videoPlayer" controls playsinline></video>
+  <div class="container" id="ui-base">
+    <h1>IPTV VR Shinacon</h1>
+    <input id="url" type="text" placeholder="URL .m3u8 o mp4">
+    <button onclick="cargarYEntrar()">ENTRAR VR</button>
+    <div class="player-preview">
+       <p style="text-align:center; padding-top:80px; color:#555">Vista previa desactivada en modo normal</p>
     </div>
   </div>
 
   <script type="module">
     import Hls from "hls.js";
-    const v = document.getElementById('videoPlayer');
-    const state = { channels: [], currentIndex: -1 };
-    let hls = null;
+    const v = document.getElementById('videoVr');
+    let hls = new Hls();
 
-    // Lógica para el control físico: Capturar el clic del "mouse" de la mano
-    window.addEventListener('click', (e) => {
-      // Si estamos en VR, el clic del control activará el raycaster de A-Frame automáticamente
-      console.log("Clic detectado del control");
-    });
-
-    window.entrarVR = function() {
-      if(!v.src && !v.querySelector('source')) return alert("Carga un canal");
-      document.getElementById('vr-layer').style.display = 'block';
-      document.getElementById('main-ui').style.display = 'none';
-      document.getElementById('vr-L').setAttribute('src', '#videoPlayer');
-      document.getElementById('vr-R').setAttribute('src', '#videoPlayer');
-      if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
-    };
-
-    window.salirVR = function() {
-      document.getElementById('vr-layer').style.display = 'none';
-      document.getElementById('main-ui').style.display = 'block';
-      if (document.exitFullscreen) document.exitFullscreen();
-    };
-
-    async function playUrl(url){
-      if(hls){ hls.destroy(); hls = null; }
-      if(url.includes('.m3u8')){
-        hls = new Hls(); hls.loadSource(url); hls.attachMedia(v);
+    window.cargarYEntrar = function() {
+      const url = document.getElementById('url').value;
+      if(!url) return;
+      
+      if(url.includes('.m3u8')) {
+        hls.loadSource(url); hls.attachMedia(v);
         hls.on(Hls.Events.MANIFEST_PARSED, () => v.play());
       } else { v.src = url; v.play(); }
+
+      document.getElementById('vr-layer').style.display = 'block';
+      document.getElementById('ui-base').style.display = 'none';
+      document.documentElement.requestFullscreen();
     }
 
-    document.getElementById('loadChannel').onclick = () => {
-      const url = document.getElementById('channelUrl').value;
-      if(url) { 
-        state.channels.push({title: "Canal Nuevo", url: url}); 
-        renderList(); playUrl(url); 
+    // Funciones de control interactivo
+    window.togglePlay = function() {
+      const iconL = document.getElementById('play-pause-L');
+      const iconR = document.getElementById('play-pause-R');
+      if(v.paused) { 
+        v.play(); 
+        iconL.setAttribute('src', '#icon-pause'); 
+        iconR.setAttribute('src', '#icon-pause');
+      } else { 
+        v.pause(); 
+        iconL.setAttribute('src', '#icon-play'); 
+        iconR.setAttribute('src', '#icon-play');
       }
-    };
-
-    function renderList(){
-      const list = document.getElementById('channelList');
-      list.innerHTML = '';
-      state.channels.forEach((ch, idx) => {
-        const d = document.createElement('div');
-        d.className = 'channel-item';
-        d.innerHTML = `<span>${ch.title}</span>`;
-        d.onclick = () => { state.currentIndex = idx; playUrl(ch.url); };
-        list.appendChild(d);
-      });
     }
+
+    window.volUp = function() { if(v.volume < 1) v.volume += 0.1; }
+    window.volDown = function() { if(v.volume > 0) v.volume -= 0.1; }
+    window.salirVR = function() { location.reload(); }
   </script>
 </body>
 </html>
