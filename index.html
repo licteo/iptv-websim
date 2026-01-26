@@ -3,27 +3,28 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no" />
-  <title>VR Sincronizado Pro</title>
+  <title>VR Sincronizado Perfecto</title>
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
 
   <style>
     body { margin: 0; background: #000; overflow: hidden; }
-    #overlay {
+    
+    /* Línea de división exacta (Alineación con el tabique de las gafas) */
+    .linea-division {
+      position: absolute; left: 50%; top: 0; bottom: 0;
+      width: 2px; background: rgba(255,255,255,0.8);
+      box-shadow: 0 0 10px rgba(255,255,255,0.5);
+      z-index: 9999; pointer-events: none;
+    }
+
+    #ui-inicio {
       position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0,0,0,0.8); z-index: 1000; display: flex;
+      background: #050a10; z-index: 10000; display: flex;
       flex-direction: column; align-items: center; justify-content: center;
     }
-    .controles { background: #1a1a1a; padding: 20px; border-radius: 15px; border: 1px solid #00d4ff; width: 80%; max-width: 300px; }
-    input { width: 100%; padding: 12px; margin: 10px 0; border-radius: 5px; border: none; box-sizing: border-box; }
-    button { width: 100%; padding: 15px; background: #00d4ff; border: none; border-radius: 5px; font-weight: bold; }
-    
-    /* Línea de centrado estilo YouTube */
-    .divisor {
-      position: absolute; left: 50%; top: 0; bottom: 0; width: 2px;
-      background: rgba(255,255,255,0.6); z-index: 999; pointer-events: none;
-      display: none;
-    }
-    .vr-on .divisor { display: block; }
+    .caja { background: #111; padding: 25px; border-radius: 15px; border: 1px solid #00d4ff; width: 85%; max-width: 320px; }
+    input { width: 100%; padding: 12px; margin: 15px 0; border-radius: 5px; border: 1px solid #333; background: #000; color: #fff; }
+    button { width: 100%; padding: 15px; background: #00d4ff; border: none; border-radius: 5px; font-weight: bold; font-size: 16px; cursor: pointer; }
   </style>
 
   <script type="importmap">
@@ -32,73 +33,72 @@
 </head>
 <body>
 
-  <div id="overlay">
-    <div class="controles">
-      <h3 style="color:#00d4ff; margin-top:0; text-align:center;">IPTV VR FIX</h3>
-      <input id="url" type="text" placeholder="Pega link .m3u8 o mp4">
-      <button onclick="entrarVR()">REPRODUCIR EN RV</button>
+  <div class="linea-division"></div>
+
+  <div id="ui-inicio">
+    <div class="caja">
+      <h2 style="color:#00d4ff; margin:0; text-align:center;">Cine VR Pro</h2>
+      <input id="urlInput" type="text" placeholder="URL .m3u8 o mp4">
+      <button onclick="lanzarCine()">PANTALLA COMPLETA VR</button>
     </div>
   </div>
 
-  <div class="divisor" id="linea"></div>
-
-  <a-scene id="escena" loading-screen="enabled: false" embedded="false">
+  <a-scene loading-screen="enabled: false" vr-mode-ui="enabled: false">
     <a-assets>
-      <video id="vid" autoplay crossorigin="anonymous" playsinline webkit-playsinline></video>
+      <video id="videoVr" autoplay crossorigin="anonymous" playsinline></video>
     </a-assets>
 
-    <a-sky color="#111"></a-sky>
-    <a-grid material="opacity: 0.2; color: #00d4ff"></a-grid>
+    <a-sky color="#020202"></a-sky>
 
-    <a-entity id="mundo" position="0 0 0">
-        <a-video src="#vid" width="4" height="2.25" position="-2.2 1.6 -5" rotation="0 5 0"></a-video>
-        <a-video src="#vid" width="4" height="2.25" position="2.2 1.6 -5" rotation="0 -5 0"></a-video>
+    <a-entity id="rig-pantallas" position="0 1.6 -5">
+      
+      <a-curvedimage src="#videoVr" height="3.5" radius="5.7" theta-length="42"
+                     position="-2.9 0 0.5" rotation="0 160 0"></a-curvedimage>
+
+      <a-curvedimage src="#videoVr" height="3.5" radius="5.7" theta-length="42"
+                     position="2.9 0 0.5" rotation="0 158 0"></a-curvedimage>
+      
     </a-entity>
 
-    <a-entity camera look-controls="pointerLockEnabled: true" position="0 1.6 0">
-        <a-entity cursor="fuse: true; fuseTimeout: 1500"
-                  position="0 0 -1"
-                  geometry="primitive: ring; radiusInner: 0.01; radiusOuter: 0.015"
-                  material="color: #00d4ff; shader: flat">
-        </a-entity>
+    <a-entity camera look-controls position="0 1.6 0">
+      <a-entity cursor="fuse: true; fuseTimeout: 1000"
+                position="0 0 -1"
+                geometry="primitive: ring; radiusInner: 0.01; radiusOuter: 0.015"
+                material="color: #00d4ff; shader: flat">
+      </a-entity>
     </a-entity>
+
   </a-scene>
 
   <script type="module">
     import Hls from "hls.js";
-    const v = document.getElementById('vid');
+    const video = document.getElementById('videoVr');
     const hls = new Hls();
 
-    window.entrarVR = function() {
-      const url = document.getElementById('url').value.trim();
+    window.lanzarCine = function() {
+      const url = document.getElementById('urlInput').value.trim();
       if(!url) return;
 
-      // Cargar Video
+      // Cargar el stream
       if (Hls.isSupported() && url.includes(".m3u8")) {
         hls.loadSource(url);
-        hls.attachMedia(v);
-        hls.on(Hls.Events.MANIFEST_PARSED, () => v.play());
+        hls.attachMedia(video);
+        hls.on(Hls.Events.MANIFEST_PARSED, () => video.play());
       } else {
-        v.src = url;
-        v.play();
+        video.src = url;
+        video.play();
       }
 
-      // Activar Interfaz
-      document.getElementById('overlay').style.display = 'none';
-      document.body.classList.add('vr-on');
+      // Ocultar Interfaz
+      document.getElementById('ui-inicio').style.display = 'none';
 
-      // Forzar Pantalla Completa
+      // Pantalla Completa
       const doc = document.documentElement;
       if (doc.requestFullscreen) doc.requestFullscreen();
+      else if (doc.webkitRequestFullscreen) doc.webkitRequestFullscreen();
 
-      // RE-ORIENTAR CÁMARA (Solución al problema de "todo oscuro")
-      // Esto fuerza a la escena a dibujarse y centrarse
-      setTimeout(() => {
-        const scene = document.querySelector('a-scene');
-        scene.resize();
-        // Forzamos a la cámara a mirar al frente (0, 1.6, 0)
-        document.querySelector('[camera]').setAttribute('rotation', '0 0 0');
-      }, 300);
+      // Forzar al sensor a calibrar
+      window.dispatchEvent(new Event('resize'));
     }
   </script>
 </body>
