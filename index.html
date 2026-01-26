@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no" />
-  <title>IPTV VR Fullscreen</title>
+  <title>IPTV VR Cardboard Pro</title>
 
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
 
@@ -11,123 +11,104 @@
     :root{--accent:#00d4ff;--bg:#000}
     body{margin:0;background:var(--bg);color:white;font-family:sans-serif;overflow:hidden}
     
-    /* Controles */
-    .ui-panel {
-      position: absolute; top: 10px; left: 10px; z-index: 1000;
-      background: rgba(0,0,0,0.9); padding: 15px; border-radius: 12px;
-      border: 1px solid var(--accent); width: 280px;
-      transition: all 0.5s ease;
+    /* UI de Configuración */
+    .ui-overlay {
+      position: absolute; top: 20px; left: 20px; z-index: 1000;
+      background: rgba(15, 23, 32, 0.95); padding: 20px; border-radius: 15px;
+      border: 1px solid var(--accent); width: 300px; transition: 0.4s;
     }
-    .ui-hidden { transform: translateY(-120%); opacity: 0; pointer-events: none; }
+    .ui-hidden { opacity: 0; pointer-events: none; transform: scale(0.9); }
     
-    input, button { width: 100%; margin-bottom: 10px; padding: 12px; border-radius: 8px; border: none; font-size: 14px; }
-    input { background: #111; color: white; border: 1px solid #333; }
-    button { background: var(--accent); color: #000; font-weight: bold; cursor: pointer; text-transform: uppercase; }
+    input { width: 100%; padding: 12px; margin-bottom: 12px; border-radius: 8px; border: 1px solid #333; background: #000; color: white; box-sizing: border-box; }
+    button { width: 100%; padding: 15px; background: var(--accent); color: #000; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
 
-    /* Botón flotante para volver a mostrar controles */
-    #showControls {
-      position: absolute; bottom: 20px; left: 20px; z-index: 1001;
-      background: rgba(255,255,255,0.2); border: none; border-radius: 50%;
-      width: 40px; height: 40px; color: white; display: none;
+    /* Línea de calibración central (estilo YouTube VR) */
+    .center-line {
+      position: absolute; left: 50%; top: 10%; bottom: 10%;
+      width: 1px; background: rgba(255,255,255,0.4); z-index: 100;
+      pointer-events: none; display: none;
     }
+    .vr-active .center-line { display: block; }
 
-    #master-container { width: 100vw; height: 100vh; background: #000; }
-    
-    /* Línea de alineación central */
-    .guide-line {
-      position: absolute; left: 50%; top: 0; bottom: 0;
-      width: 1px; background: rgba(255,255,255,0.3); z-index: 100;
-      display: none;
-    }
-    .vr-mode .guide-line { display: block; }
-
-    a-scene { display: none; }
-    .vr-mode a-scene { display: block !important; }
+    #vr-display { width: 100vw; height: 100vh; }
   </style>
 
   <script type="importmap">
     { "imports": { "hls.js": "https://esm.sh/hls.js@1.4.12" } }
   </script>
 </head>
-<body class="vr-mode">
+<body class="vr-active">
 
-  <div class="ui-panel" id="ui">
-    <h3 style="margin:0 0 10px 0; color:var(--accent); text-align: center;">Modo VR Sincronizado</h3>
-    <input id="urlInput" type="text" placeholder="Link .m3u8 o mp4">
-    <button onclick="activarCineVR()">Entrar en Pantalla Completa</button>
-    <p style="font-size: 10px; color: #aaa; text-align: center;">Presiona el botón para ocultar controles y centrar imagen.</p>
+  <div class="center-line"></div>
+
+  <div class="ui-overlay" id="menu">
+    <h2 style="margin:0 0 15px 0; font-size: 18px; color: var(--accent)">Modo RV Sincronizado</h2>
+    <input id="url" type="text" placeholder="URL del canal .m3u8 o mp4">
+    <button onclick="iniciarModoVR()">ACTIVAR MODO RV</button>
+    <p style="font-size: 11px; color: #777; margin-top: 10px; text-align: center;">
+      Calidad recomendada: 1080p. <br>Usa la línea blanca para centrar el móvil.
+    </p>
   </div>
 
-  <button id="showControls" onclick="toggleUI()">⚙️</button>
-
-  <div id="master-container">
-    <div class="guide-line"></div>
-    
-    <a-scene id="escena" embedded loading-screen="enabled: false" device-orientation-permission-ui="enabled: true">
+  <div id="vr-display">
+    <a-scene embedded loading-screen="enabled: false" device-orientation-permission-ui="enabled: true">
+      
       <a-assets>
-        <video id="videoAsset" autoplay crossorigin="anonymous" playsinline></video>
+        <video id="videoSource" autoplay crossorigin="anonymous" playsinline></video>
       </a-assets>
 
-      <a-video src="#videoAsset" width="8" height="4.5" position="-4.2 1.6 -8"></a-video>
-      <a-video src="#videoAsset" width="8" height="4.5" position="4.2 1.6 -8"></a-video>
+      <a-video src="#videoSource" width="7" height="4" position="-3.8 1.6 -7" rotation="0 5 0"></a-video>
+      <a-video src="#videoSource" width="7" height="4" position="3.8 1.6 -7" rotation="0 -5 0"></a-video>
 
       <a-entity camera look-controls position="0 1.6 0">
-        <a-cursor color="var(--accent)" scale="0.5 0.5 0.5"></a-cursor>
+        <a-entity cursor="fuse: true; fuseTimeout: 1500"
+                  position="0 0 -1"
+                  geometry="primitive: ring; radiusInner: 0.02; radiusOuter: 0.03"
+                  material="color: #00d4ff; shader: flat">
+          <a-animation begin="fusing" easing="ease-in" attribute="scale" fill="forwards" from="1 1 1" to="0.1 0.1 0.1" dur="1500"></a-animation>
+        </a-entity>
       </a-entity>
 
-      <a-sky color="#050505"></a-sky>
+      <a-sky color="#020202"></a-sky>
+      
+      <a-grid static-body material="opacity: 0.1; color: #ffffff"></a-grid>
+
     </a-scene>
   </div>
 
   <script type="module">
     import Hls from "hls.js";
 
-    const ui = document.getElementById('ui');
-    const vVR = document.getElementById('videoAsset');
-    const btnShow = document.getElementById('showControls');
+    const video = document.getElementById('videoSource');
+    const menu = document.getElementById('menu');
     const hls = new Hls();
 
-    window.activarCineVR = function() {
-      const url = document.getElementById('urlInput').value.trim();
-      if(!url) return alert("Pega un link primero");
+    window.iniciarModoVR = function() {
+      const link = document.getElementById('url').value.trim();
+      if(!link) return alert("Pega un link primero");
 
-      // 1. Cargar Video
-      cargarVideo(url);
-
-      // 2. Intentar Pantalla Completa (Full Screen API)
-      const docEl = document.documentElement;
-      if (docEl.requestFullscreen) docEl.requestFullscreen();
-      else if (docEl.webkitRequestFullscreen) docEl.webkitRequestFullscreen();
-
-      // 3. Ocultar Interfaz
-      toggleUI(false);
-      btnShow.style.display = 'block';
-    }
-
-    window.toggleUI = function(show = true) {
-      if(show) {
-        ui.classList.remove('ui-hidden');
+      // 1. Cargar el stream
+      if (Hls.isSupported() && link.includes(".m3u8")) {
+        hls.loadSource(link);
+        hls.attachMedia(video);
+        hls.on(Hls.Events.MANIFEST_PARSED, () => video.play());
       } else {
-        ui.classList.add('ui-hidden');
+        video.src = link;
+        video.play();
       }
+
+      // 2. Pantalla completa real
+      const el = document.documentElement;
+      if (el.requestFullscreen) el.requestFullscreen();
+      else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+
+      // 3. Ocultar menú
+      menu.classList.add('ui-hidden');
     }
 
-    function cargarVideo(url) {
-      if (Hls.isSupported() && url.includes(".m3u8")) {
-        hls.destroy();
-        const newHls = new Hls();
-        newHls.loadSource(url);
-        newHls.attachMedia(vVR);
-        newHls.on(Hls.Events.MANIFEST_PARSED, () => vVR.play());
-      } else {
-        vVR.src = url;
-        vVR.play();
-      }
-    }
-
-    // Escuchar cambios de orientación para re-ajustar si es necesario
-    window.addEventListener("orientationchange", () => {
-      setTimeout(() => { window.scrollTo(0,1); }, 500);
+    // Permitir reabrir menú con doble toque
+    document.body.addEventListener('dblclick', () => {
+      menu.classList.toggle('ui-hidden');
     });
   </script>
 </body>
