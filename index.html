@@ -3,29 +3,25 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no" />
-  <title>Shinacon VR Fixed HUD</title>
+  <title>Shinacon VR Perfect Sync</title>
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
 
   <style>
     body { margin: 0; background: #000; overflow: hidden; }
     
-    /* ESTA ES LA CLAVE: Línea pegada al cristal del móvil, no al mundo 3D */
+    /* DIVISOR FÍSICO: Siempre en el centro del cristal del teléfono */
     .divisor-fijo {
-      position: absolute;
-      left: 50%; top: 0; bottom: 0;
-      width: 2px;
-      background: rgba(255, 255, 255, 0.8);
-      z-index: 20000; /* Por encima de todo */
-      pointer-events: none;
-      display: none;
+      position: absolute; left: 50%; top: 0; bottom: 0;
+      width: 2px; background: rgba(255, 255, 255, 0.9);
+      z-index: 20000; pointer-events: none; display: none;
     }
-    .vr-on .divisor-fijo { display: block; }
+    .vr-mode .divisor-fijo { display: block; }
 
-    #ui-layer {
+    #overlay {
       position: absolute; inset: 0; z-index: 20001;
       background: #000; display: flex; align-items: center; justify-content: center;
     }
-    .panel { background: #111; padding: 25px; border-radius: 15px; border: 1px solid #00d4ff; width: 280px; text-align: center; }
+    .box { background: #111; padding: 25px; border-radius: 15px; border: 1px solid #00d4ff; width: 290px; text-align: center; }
     input { width: 100%; padding: 12px; margin: 15px 0; border-radius: 5px; background: #222; color: white; border: none; }
     button { width: 100%; padding: 15px; background: #00d4ff; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; }
   </style>
@@ -34,47 +30,49 @@
     { "imports": { "hls.js": "https://esm.sh/hls.js@1.4.12" } }
   </script>
 </head>
-<body class="vr-on">
+<body class="vr-mode">
 
   <div class="divisor-fijo"></div>
 
-  <div id="ui-layer">
-    <div class="panel">
-      <h3 style="color:#00d4ff; margin:0;">CALIBRACIÓN FINAL</h3>
+  <div id="overlay">
+    <div class="box">
+      <h3 style="color:#00d4ff; margin:0;">AJUSTE FINAL SHINACON</h3>
       <input id="url" type="text" placeholder="URL .m3u8 o mp4">
-      <button onclick="activarCine()">INICIAR CINE VR</button>
+      <button onclick="iniciarCine()">REPRODUCIR AHORA</button>
     </div>
   </div>
 
   <a-scene loading-screen="enabled: false" vr-mode-ui="enabled: false">
     <a-assets>
-      <video id="videoVr" autoplay crossorigin="anonymous" playsinline></video>
+      <video id="videoAsset" autoplay crossorigin="anonymous" playsinline></video>
     </a-assets>
 
-    <a-entity id="escenario-fijo">
-      <a-video src="#videoVr" width="4.2" height="2.3" position="-2.2 1.6 -4"></a-video>
-      <a-video src="#videoVr" width="4.2" height="2.3" position="2.2 1.6 -4"></a-video>
-      
-      <a-grid material="opacity: 0.1; color: #00d4ff"></a-grid>
-    </a-entity>
-
     <a-entity camera look-controls position="0 1.6 0">
-      <a-entity cursor="fuse: true; fuseTimeout: 1000"
-                position="0 0 -1"
-                geometry="primitive: ring; radiusInner: 0.008; radiusOuter: 0.012"
-                material="color: #00d4ff; shader: flat">
+      
+      <a-entity id="pantallas-seguidoras" position="0 0 -4">
+        
+        <a-video src="#videoAsset" width="4.2" height="2.3" position="-2.15 0 0"></a-video>
+        
+        <a-video src="#videoAsset" width="4.2" height="2.3" position="2.15 0 0"></a-video>
+
+        <a-entity cursor="fuse: true; fuseTimeout: 1000"
+                  position="0 0 1"
+                  geometry="primitive: ring; radiusInner: 0.01; radiusOuter: 0.015"
+                  material="color: #00d4ff; shader: flat">
+        </a-entity>
       </a-entity>
+
     </a-entity>
 
-    <a-sky color="#050505"></a-sky>
+    <a-sky color="#000"></a-sky>
   </a-scene>
 
   <script type="module">
     import Hls from "hls.js";
-    const v = document.getElementById('videoVr');
+    const v = document.getElementById('videoAsset');
     const hls = new Hls();
 
-    window.activarCine = function() {
+    window.iniciarCine = function() {
       const link = document.getElementById('url').value.trim();
       if(!link) return;
 
@@ -87,11 +85,11 @@
         v.play();
       }
 
-      document.getElementById('ui-layer').style.display = 'none';
+      document.getElementById('overlay').style.display = 'none';
 
-      // Pantalla completa y bloqueo de giro
+      // Pantalla completa y bloqueo de orientación
       const doc = document.documentElement;
-      if (doc.requestFullscreen) {
+      if (el = doc.requestFullscreen) {
         doc.requestFullscreen().then(() => {
           if (screen.orientation && screen.orientation.lock) {
             screen.orientation.lock('landscape').catch(() => {});
