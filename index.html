@@ -3,31 +3,40 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no" />
-  <title>Reproductor IPTV Universal VR</title>
+  <title>IPTV Stereo VR</title>
 
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
 
   <style>
-    :root{--accent:#00d4ff;--bg:#0f1720;--card:#1a242f}
-    body{margin:0;background:var(--bg);color:white;font-family:system-ui;overflow-x:hidden}
+    :root{--accent:#00d4ff;--bg:#050a10}
+    body{margin:0;background:var(--bg);color:white;font-family:sans-serif;overflow:hidden}
     
-    .container{padding:15px;max-width:800px;margin:auto}
-    .panel{background:var(--card);padding:15px;border-radius:12px;border:1px solid #2c3e50;margin-bottom:15px}
+    /* Panel de Control Flotante */
+    .ui-overlay {
+      position: absolute; top: 10px; left: 10px; z-index: 999;
+      background: rgba(0,0,0,0.85); padding: 15px; border-radius: 12px;
+      border: 1px solid var(--accent); width: 260px;
+      transition: opacity 0.3s;
+    }
     
-    input{width:100%;padding:12px;margin-bottom:10px;border-radius:8px;border:1px solid #34495e;background:#000;color:white;box-sizing:border-box}
-    button{width:100%;padding:12px;background:var(--accent);color:#000;border:none;border-radius:8px;font-weight:bold;cursor:pointer}
-    
-    .vr-toggle{display:flex;align-items:center;gap:10px;margin:10px 0;padding:10px;background:#000;border-radius:8px}
+    input, button { width: 100%; margin-bottom: 8px; padding: 12px; border-radius: 8px; border: none; box-sizing: border-box; }
+    input { background: #111; color: white; border: 1px solid #333; }
+    button { background: var(--accent); color: #000; font-weight: bold; cursor: pointer; }
 
-    #display-area{width:100%;height:350px;background:#000;border-radius:12px;overflow:hidden;position:relative}
-    video, iframe{width:100%;height:100%;border:none}
+    #master-container { width: 100vw; height: 100vh; position: relative; }
     
-    /* VR Scene Viewport */
-    a-scene{display:none;width:100%;height:100%}
-    .vr-active a-scene{display:block}
-    .vr-active #normalPlayer, .vr-active #ytPlayer{display:none}
-
-    @media (max-width:640px){ #display-area{height:250px} }
+    /* Ocultar elementos */
+    a-scene { display: none; }
+    .vr-active a-scene { display: block !important; }
+    .hidden { display: none !important; }
+    
+    /* Línea divisoria central para VR */
+    .vr-line {
+      position: absolute; left: 50%; top: 0; bottom: 0;
+      width: 2px; background: rgba(255,255,255,0.2);
+      z-index: 100; display: none;
+    }
+    .vr-active .vr-line { display: block; }
   </style>
 
   <script type="importmap">
@@ -36,102 +45,74 @@
 </head>
 <body>
 
-  <div class="container">
-    <h1 style="text-align:center; color:var(--accent)">IPTV VR Cinema</h1>
+  <div class="ui-overlay" id="ui">
+    <h3 style="margin:0 0 10px 0; color:var(--accent)">Stereo VR Player</h3>
+    <input id="urlIn" type="text" placeholder="Link .m3u8 o YouTube">
+    <button onclick="lanzarVR()">▶ INICIAR VR</button>
+    <p style="font-size: 11px; color: #888; margin: 5px 0;">Pega el link y el modo VR dividirá la pantalla automáticamente.</p>
+  </div>
 
-    <div class="panel">
-      <input id="videoUrl" type="text" placeholder="Pega URL de YouTube o lista .m3u8">
-      <button id="btnPlay">REPRODUCIR AHORA</button>
-      
-      <div class="vr-toggle">
-        <input type="checkbox" id="modeVR" style="width:auto; margin:0">
-        <label for="modeVR">👓 Activar Inmersión VR (Giroscopio)</label>
-      </div>
-    </div>
-
-    <div id="display-area">
-      <video id="normalPlayer" controls playsinline></video>
-      
-      <div id="ytPlayer" style="display:none; width:100%; height:100%;"></div>
-
-      <a-scene id="vrScene" embedded device-orientation-permission-ui="enabled: true">
-        <a-assets>
-          <video id="assetVideo" autoplay crossorigin="anonymous" playsinline></video>
-        </a-assets>
-        
-        <a-video id="vrScreen" src="#assetVideo" width="16" height="9" position="0 1.6 -10"></a-video>
-        
-        <a-sky color="#000"></a-sky>
-        
-        <a-entity camera look-controls position="0 1.6 0">
-           <a-cursor color="#00d4ff"></a-cursor>
-        </a-entity>
-      </a-scene>
-    </div>
+  <div id="master-container">
+    <div class="vr-line"></div>
     
-    <p style="font-size: 12px; color: #7f8c8d; text-align: center; margin-top: 10px;">
-      Nota: Para YouTube en VR, usa el botón nativo de YouTube dentro del reproductor.
-    </p>
+    <video id="vidNormal" controls style="width:100%; height:100%; object-fit: contain;"></video>
+    
+    <a-scene id="escenaVR" embedded loading-screen="enabled: false" device-orientation-permission-ui="enabled: true">
+      <a-assets>
+        <video id="assetVid" autoplay crossorigin="anonymous" playsinline></video>
+      </a-assets>
+
+      <a-video src="#assetVid" width="8" height="4.5" position="-4.5 1.6 -10"></a-video>
+      
+      <a-video src="#assetVid" width="8" height="4.5" position="4.5 1.6 -10"></a-video>
+
+      <a-entity camera look-controls position="0 1.6 0">
+        <a-cursor color="var(--accent)" fuse="true" timeout="1500"></a-cursor>
+      </a-entity>
+
+      <a-sky color="#000"></a-sky>
+    </a-scene>
   </div>
 
   <script type="module">
     import Hls from "hls.js";
 
-    const btnPlay = document.getElementById('btnPlay');
-    const inputUrl = document.getElementById('videoUrl');
-    const checkVR = document.getElementById('modeVR');
-    const display = document.getElementById('display-area');
-    
-    const vNormal = document.getElementById('normalPlayer');
-    const vVR = document.getElementById('assetVideo');
-    const ytCont = document.getElementById('ytPlayer');
+    const vNormal = document.getElementById('vidNormal');
+    const vVR = document.getElementById('assetVid');
+    const container = document.getElementById('master-container');
     const hls = new Hls();
 
-    btnPlay.addEventListener('click', () => {
-      const url = inputUrl.value.trim();
-      const useVR = checkVR.checked;
+    window.lanzarVR = function() {
+      const url = document.getElementById('urlIn').value.trim();
+      if(!url) return alert("Pega un link primero");
 
-      // Reset
-      display.classList.remove('vr-active');
-      vNormal.style.display = 'none';
-      ytCont.style.display = 'none';
-      vNormal.pause();
-      vVR.pause();
+      // Activar visualización dividida
+      container.classList.add('vr-active');
+      document.getElementById('ui').style.opacity = "0.1"; // Atenuar UI
+      vNormal.classList.add('hidden');
 
       if (url.includes("youtube.com") || url.includes("youtu.be")) {
-        // MODO YOUTUBE (Evita Error 153)
-        const id = getYTID(url);
-        ytCont.innerHTML = `<iframe src="https://www.youtube.com/embed/${id}?autoplay=1&rel=0&modestbranding=1" allow="accelerometer; autoplay; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
-        ytCont.style.display = 'block';
+        // Nota: YouTube bloquea la duplicación directa por seguridad.
+        // Se recomienda usar links directos .m3u8 para el efecto 3D real.
+        alert("Para YouTube, usa el botón 'Mirar en RV' nativo del video que viste en tu captura.");
+        container.classList.remove('vr-active');
+        vNormal.classList.remove('hidden');
       } else {
-        // MODO IPTV / DIRECTO
-        if (useVR) {
-          display.classList.add('vr-active');
-          loadMedia(vVR, url);
-        } else {
-          vNormal.style.display = 'block';
-          loadMedia(vNormal, url);
-        }
+        cargarStream(vVR, url);
       }
-    });
+    }
 
-    function loadMedia(videoEl, url) {
+    function cargarStream(elemento, url) {
       if (Hls.isSupported() && url.includes(".m3u8")) {
         hls.destroy();
         const newHls = new Hls();
         newHls.loadSource(url);
-        newHls.attachMedia(videoEl);
-        newHls.on(Hls.Events.MANIFEST_PARSED, () => videoEl.play());
+        newHls.attachMedia(elemento);
+        newHls.on(Hls.Events.MANIFEST_PARSED, () => elemento.play());
       } else {
-        videoEl.src = url;
-        videoEl.play();
+        elemento.src = url;
+        elemento.play();
       }
-    }
-
-    function getYTID(url) {
-      const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
-      const match = url.match(regExp);
-      return (match && match[2].length == 11) ? match[2] : null;
     }
   </script>
 </body>
