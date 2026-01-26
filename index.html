@@ -3,130 +3,274 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover" />
-  <title>IPTV VR - Modo Cine</title>
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="IPTV Player" />
+  <meta name="theme-color" content="#00d4ff" />
+  <title>Reproductor IPTV VR</title>
+
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+
   <style>
-    :root{--bg:#0f1720;--accent:#00d4ff;--danger:#ff4444}
-    *{box-sizing:border-box;font-family:sans-serif}
-    html,body{height:100%;margin:0;background:#051019;color:#e6eef6;overflow:hidden}
-    .container{max-width:900px;margin:18px auto;padding:18px;position:relative;z-index:2}
-    h1{text-align:center;color:var(--accent);font-size:22px}
-    .input-section{display:flex;gap:8px;margin:10px 0;flex-wrap:wrap}
-    input{flex:1;padding:12px;border-radius:8px;border:1px solid #22303a;background:#0b1115;color:#fff}
-    button{background:var(--accent);border:none;padding:12px;border-radius:8px;font-weight:bold;cursor:pointer}
-    .btn-vr{background:#ff00ff;color:#fff;box-shadow:0 0 10px #ff00ff}
-    .channel-list{background:#071018;border-radius:10px;padding:8px;max-height:200px;overflow:auto;border:1px solid #16202a;margin-bottom:10px}
-    .channel-item{padding:10px;border-bottom:1px solid #16202a;cursor:pointer;display:flex;justify-content:space-between}
+    :root{--bg:#0f1720;--card:#141922;--muted:#9aa4af;--accent:#00d4ff;--danger:#ff4444}
+    *{box-sizing:border-box;font-family:system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial}
+    html,body{height:100%;margin:0;background:linear-gradient(180deg,#051019 0%, #071424 100%);color:#e6eef6}
+    .container{max-width:980px;margin:18px auto;padding:18px}
+    h1{margin:0 0 12px 0;font-size:20px;text-align:center;color:var(--accent)}
+    .input-section{display:flex;gap:8px;margin:8px 0;flex-wrap:wrap}
+    input[type="text"]{flex:1;padding:10px 12px;border-radius:8px;border:1px solid #22303a;background:#0b1115;color:#e6eef6}
+    .file-input{padding:8px}
+    button{background:var(--accent);color:#002;border:none;padding:10px 12px;border-radius:8px;cursor:pointer}
+    .btn-secondary{background:#2b3940;color:#e6eef6}
+    .btn-danger{background:var(--danger)}
+    .btn-vr{background:#ff00ff; color:#fff; font-weight:bold; box-shadow:0 0 10px #ff00ff}
     
-    /* CAPA VR */
-    #vr-layer{display:none;position:fixed;inset:0;z-index:10;background:#000}
-    body.is-vr #vr-layer{display:block}
-    body.is-vr .container{display:none}
+    /* BOTÓN PARA SALIR DE VR */
     #btn-exit-vr {
-      display:none; position:fixed; top:20px; left:50%; transform:translateX(-50%);
-      z-index:1000; background:var(--danger); color:#fff; padding:10px 20px; border-radius:20px; border:none;
+      display: none; position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+      z-index: 1000; background: var(--danger); color: white; padding: 10px 20px;
+      border-radius: 20px; font-weight: bold; border: 2px solid white;
     }
-    body.is-vr #btn-exit-vr{display:block}
+    body.is-vr #btn-exit-vr { display: block; }
+
+    .search-container{flex:1;display:flex;align-items:center;gap:6px}
+    .search-input{flex:1;padding:8px;border-radius:8px;border:1px solid #22303a;background:#071018;color:#e6eef6}
+    .favorites-toggle{display:flex;align-items:center;gap:6px;color:var(--muted)}
+    .channel-list{margin-top:10px;background:linear-gradient(180deg,#071018,#061014);border-radius:10px;padding:8px;min-height:80px;max-height:240px;overflow:auto;border:1px solid #16202a}
+    .channel-item{padding:10px;border-radius:8px;background:transparent;border:1px solid transparent;display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;cursor:pointer}
+    .channel-item:hover{background:#081118;border-color:#16313d}
+    .star{background:transparent;border:0;color:var(--muted);font-size:18px;cursor:pointer}
+    .video-container{margin-top:12px;background:var(--card);padding:8px;border-radius:10px;border:1px solid #16202a; position:relative;}
     
-    .player-shell{width:100%;height:400px;background:#000;border-radius:10px;overflow:hidden}
-    video, iframe{width:100%;height:100%;border:0}
+    .player-shell{width:100%;height:520px;border-radius:6px;overflow:hidden;background:black;display:block; position:relative;}
+    video, iframe{width:100%;height:100%;display:block;border-radius:6px;background:black;border:0}
+    
+    body.is-vr .container { display: none; }
+    #vr-layer { display: none; position: fixed; inset: 0; z-index: 10; background: #000; }
+    body.is-vr #vr-layer { display: block; }
+    body.is-vr .player-shell { 
+      position: fixed; inset: 0; width: 100vw; height: 100vh; 
+      z-index: 100; opacity: 0.1;
+    }
+    .divisor-fijo {
+      position: absolute; left: 50%; top: 0; bottom: 0; width: 2px;
+      background: rgba(255,255,255,0.3); z-index: 50; display: none; pointer-events: none;
+    }
+    body.is-vr .divisor-fijo { display: block; }
+
+    .channel-controls{display:flex;gap:8px;align-items:center;margin-top:8px;justify-content:center}
+    .channel-btn{padding:8px 12px;border-radius:6px;border:0;background:#0b1318;color:#dfeafb;cursor:pointer}
+    .current-channel-info{color:var(--muted);font-size:14px}
+    .loading{position:relative;text-align:center;color:var(--muted);padding:6px;font-size:14px}
+    .empty-message{color:var(--muted);margin:12px 0;text-align:center}
+    @media (max-width:900px){ .player-shell{height:420px} }
+    @media (max-width:640px){ .player-shell{height:320px} }
   </style>
-  <script type="importmap">{ "imports": { "hls.js": "https://esm.sh/hls.js@1.4.12" } }</script>
+
+  <script type="importmap">
+  { "imports": { "hls.js": "https://esm.sh/hls.js@1.4.12" } }
+  </script>
 </head>
 <body>
 
-  <button id="btn-exit-vr" onclick="toggleVR()">SALIR MODO CINE</button>
+  <button id="btn-exit-vr" onclick="toggleVR()">CERRAR MODO VR</button>
 
   <div id="vr-layer">
+    <div class="divisor-fijo"></div>
     <a-scene embedded loading-screen="enabled: false" vr-mode-ui="enabled: false">
-      <a-entity camera look-controls position="0 1.6 0"></a-entity>
-      
-      <a-video src="#videoPlayer" width="8" height="4.5" position="0 1.6 -5"></a-video>
-      
+      <a-entity camera look-controls position="0 1.6 0">
+        <a-entity id="pantallas-vr" position="0 0 -4">
+          <a-video src="#videoPlayer" width="7" height="3.9" position="0 0 0"></a-video>
+        </a-entity>
+      </a-entity>
       <a-sky color="#000"></a-sky>
     </a-scene>
   </div>
 
   <div class="container">
-    <h1>IPTV VR - Modo Cine</h1>
+    <h1>Reproductor IPTV VR</h1>
+
     <div class="input-section">
-      <input id="channelUrl" type="text" placeholder="URL .m3u8 o mp4..." />
-      <button id="loadBtn">Cargar</button>
-      <button onclick="toggleVR()" class="btn-vr">ENTRAR VR</button>
+      <input id="channelUrl" type="text" placeholder="URL .m3u8, mp4, youtube..." />
+      <button id="loadChannel">Cargar Canal</button>
+      <button onclick="toggleVR()" class="btn-vr">MODO VR</button>
     </div>
+
     <div class="input-section">
-      <input id="m3uFile" type="file" accept=".m3u" />
-      <button id="listBtn">Cargar M3U</button>
+      <input id="m3uFile" type="file" accept=".m3u,.m3u8" class="file-input" />
+      <button id="loadList" class="btn-secondary">Cargar Lista M3U</button>
+      <button id="clearList" class="btn-danger">Limpiar Lista</button>
     </div>
-    <div id="channelList" class="channel-list"></div>
-    <div class="player-shell">
-      <video id="videoPlayer" controls playsinline webkit-playsinline></video>
+
+    <div class="input-section">
+      <div class="search-container">
+        <input id="searchInput" class="search-input" placeholder="Buscar canal..." />
+      </div>
+      <label class="favorites-toggle">
+        <input id="favoritesToggle" type="checkbox" />
+        <span class="toggle-label">★ Solo Favoritos</span>
+      </label>
+    </div>
+
+    <div id="channelList" class="channel-list">
+      <p class="empty-message">No hay canales cargados</p>
+    </div>
+
+    <div class="video-container" id="playerArea">
+      <div id="playerRoot" class="player-shell">
+        <video id="videoPlayer" controls playsinline webkit-playsinline></video>
+      </div>
+      <div id="loading" class="loading" style="display:none">Cargando...</div>
+
+      <div class="channel-controls">
+        <button id="prevChannel" class="channel-btn">◀ Anterior</button>
+        <button id="favoriteCurrent" class="channel-btn" title="Marcar como favorito">★</button>
+        <span id="currentChannelInfo" class="current-channel-info"></span>
+        <button id="nextChannel" class="channel-btn">Siguiente ▶</button>
+      </div>
     </div>
   </div>
 
   <script type="module">
     import Hls from "hls.js";
 
-    const state = { channels: [], current: -1 };
-    const video = document.getElementById('videoPlayer');
+    window.toggleVR = function() {
+      const isVr = document.body.classList.toggle('is-vr');
+      if (isVr) {
+        if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
+      } else {
+        if (document.exitFullscreen) document.exitFullscreen();
+      }
+    };
+
+    window.addEventListener('keydown', (e) => {
+      if(e.key === 'Escape' && document.body.classList.contains('is-vr')) toggleVR();
+    });
+
+    const state = { channels: [], currentIndex: -1 };
+    const channelUrl = document.getElementById('channelUrl');
+    const loadChannelBtn = document.getElementById('loadChannel');
+    const m3uFile = document.getElementById('m3uFile');
+    const loadListBtn = document.getElementById('loadList');
+    const clearListBtn = document.getElementById('clearList');
+    const channelList = document.getElementById('channelList');
+    const searchInput = document.getElementById('searchInput');
+    const favoritesToggle = document.getElementById('favoritesToggle');
+    const videoPlayer = document.getElementById('videoPlayer');
+    const playerRoot = document.getElementById('playerRoot');
+    const loading = document.getElementById('loading');
+    const prevChannelBtn = document.getElementById('prevChannel');
+    const nextChannelBtn = document.getElementById('nextChannel');
+    const favoriteCurrentBtn = document.getElementById('favoriteCurrent');
+    const currentChannelInfo = document.getElementById('currentChannelInfo');
+
     let hls = null;
 
-    window.toggleVR = () => {
-      const isVr = document.body.classList.toggle('is-vr');
-      if (isVr) document.documentElement.requestFullscreen().catch(()=>{});
-      else if (document.fullscreenElement) document.exitFullscreen();
-    };
+    function showLoading(show=true){ loading.style.display = show ? 'block' : 'none' }
+    function isYouTube(url){ return /youtu\.be|youtube\.com/.test(url); }
+    function isHls(url){ return /\.m3u8($|\?)/i.test(url) || url.includes('.m3u8'); }
+    function canVideoPlay(url){ return /\.(mp4|webm|ogg)(\?.*)?$/i.test(url); }
 
-    function playIndex(i) {
-      if (i < 0 || i >= state.channels.length) return;
-      state.current = i;
-      const url = state.channels[i].url;
-      if (hls) hls.destroy();
-      if (url.includes('.m3u8')) {
-        hls = new Hls(); hls.loadSource(url); hls.attachMedia(video);
-        hls.on(Hls.Events.MANIFEST_PARSED, () => video.play());
-      } else { video.src = url; video.play(); }
+    function saveStateToLocal(){ localStorage.setItem('iptv_channels_v1', JSON.stringify(state.channels)); }
+    function loadStateFromLocal(){
+      const raw = localStorage.getItem('iptv_channels_v1');
+      if(raw) { try{ state.channels = JSON.parse(raw); } catch(e){ state.channels = [] } }
     }
 
-    // CARGAR URL MANUAL
-    document.getElementById('loadBtn').onclick = () => {
-      const url = document.getElementById('channelUrl').value;
-      if(url){ state.channels.push({title:"Manual", url}); playIndex(state.channels.length-1); render(); }
-    };
+    function renderList(){
+      const q = (searchInput.value||'').toLowerCase().trim();
+      const onlyFav = favoritesToggle.checked;
+      channelList.innerHTML = '';
+      const filtered = state.channels.filter(c=>{
+        if(onlyFav && !c.favorite) return false;
+        if(q && !(c.title||'').toLowerCase().includes(q) && !(c.url||'').toLowerCase().includes(q)) return false;
+        return true;
+      });
+      if(filtered.length===0){
+        channelList.innerHTML = '<p class="empty-message">No hay canales cargados</p>';
+        return;
+      }
+      filtered.forEach((ch, idx)=>{
+        const item = document.createElement('div');
+        item.className = 'channel-item';
+        item.onclick = () => { const realIndex = state.channels.indexOf(ch); playIndex(realIndex); };
+        const left = document.createElement('div');
+        left.innerHTML = `<strong style="display:block">${ch.title||ch.url}</strong><small style="color:var(--muted)">${ch.url}</small>`;
+        const right = document.createElement('div');
+        const star = document.createElement('button');
+        star.className = 'star';
+        star.innerText = ch.favorite ? '★' : '☆';
+        star.onclick = (e) => { e.stopPropagation(); ch.favorite = !ch.favorite; saveStateToLocal(); renderList(); };
+        right.appendChild(star);
+        item.appendChild(left); item.appendChild(right);
+        channelList.appendChild(item);
+      });
+    }
 
-    // CARGAR M3U
-    document.getElementById('listBtn').onclick = async () => {
-      const file = document.getElementById('m3uFile').files[0];
+    async function playUrl(url){
+      showLoading(true);
+      currentChannelInfo.textContent = url;
+      if(isYouTube(url)){
+        playerRoot.innerHTML = '';
+        const iframe = document.createElement('iframe');
+        iframe.allowFullscreen = true;
+        iframe.src = url.replace("watch?v=", "embed/");
+        playerRoot.appendChild(iframe);
+        showLoading(false);
+        return;
+      }
+      playerRoot.innerHTML = '';
+      playerRoot.appendChild(videoPlayer);
+      videoPlayer.pause();
+      if(hls){ hls.destroy(); hls = null; }
+
+      try{
+        if(isHls(url)){
+          hls = new Hls(); hls.loadSource(url); hls.attachMedia(videoPlayer);
+          hls.on(Hls.Events.MANIFEST_PARSED, () => videoPlayer.play());
+        } else {
+          videoPlayer.src = url; videoPlayer.play();
+        }
+      }catch(err){ console.error(err); } finally { showLoading(false); }
+    }
+
+    function playIndex(i){
+      if(i < 0 || i >= state.channels.length) return;
+      state.currentIndex = i;
+      playUrl(state.channels[i].url);
+      renderList();
+    }
+
+    loadChannelBtn.addEventListener('click', ()=>{
+      const url = channelUrl.value.trim();
+      if(url){ state.channels.push({title: url, url, favorite:false}); saveStateToLocal(); renderList(); playIndex(state.channels.length-1); }
+    });
+
+    loadListBtn.addEventListener('click', async ()=>{
+      const file = m3uFile.files[0];
       if(!file) return;
       const text = await file.text();
       const lines = text.split('\n');
-      lines.forEach((l, i) => {
-        if(l.startsWith('#EXTINF')) state.channels.push({title: l.split(',')[1] || "Canal", url: lines[i+1].trim()});
+      lines.forEach((line, i) => {
+        if(line.startsWith('#EXTINF')) state.channels.push({title: line.split(',')[1] || "Canal", url: lines[i+1].trim(), favorite:false});
       });
-      render();
-    };
+      saveStateToLocal(); renderList();
+    });
 
-    function render() {
-      const list = document.getElementById('channelList');
-      list.innerHTML = state.channels.map((c, i) => `<div class="channel-item" onclick="playIndex(${i})">${c.title}</div>`).join('');
-    }
-
-    // ==========================================
-    // CONTROL TOTAL CON EL MANDO (MODO MOUSE)
-    // ==========================================
-    window.addEventListener('mousedown', (e) => {
-      if (!document.body.classList.contains('is-vr')) return;
-
-      // Detectamos si es clic izquierdo o derecho del control
-      if (e.button === 0) { // Clic principal (Gatillo o A)
-        playIndex((state.current + 1) % state.channels.length);
-      } else if (e.button === 2) { // Clic derecho o botón atrás
-        playIndex((state.current - 1 + state.channels.length) % state.channels.length);
+    clearListBtn.addEventListener('click', ()=>{ state.channels = []; saveStateToLocal(); renderList(); });
+    nextChannelBtn.addEventListener('click', () => playIndex((state.currentIndex + 1) % state.channels.length));
+    prevChannelBtn.addEventListener('click', () => playIndex((state.currentIndex - 1 + state.channels.length) % state.channels.length));
+    
+    // MEJORA: CAMBIO DE CANAL AL HACER CLIC EN MODO VR (PARA MANDO MOUSE)
+    window.addEventListener('mousedown', () => {
+      if (document.body.classList.contains('is-vr') && state.channels.length > 0) {
+        playIndex((state.currentIndex + 1) % state.channels.length);
       }
     });
 
-    // Prevenir menú contextual al usar clic derecho del control
-    window.oncontextmenu = (e) => { if(document.body.classList.contains('is-vr')) e.preventDefault(); };
+    loadStateFromLocal();
+    renderList();
   </script>
 </body>
 </html>
