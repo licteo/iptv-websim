@@ -3,117 +3,132 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no" />
-  <title>IPTV Stereo VR</title>
+  <title>IPTV VR Fullscreen</title>
 
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
 
   <style>
-    :root{--accent:#00d4ff;--bg:#050a10}
+    :root{--accent:#00d4ff;--bg:#000}
     body{margin:0;background:var(--bg);color:white;font-family:sans-serif;overflow:hidden}
     
-    /* Panel de Control Flotante */
-    .ui-overlay {
-      position: absolute; top: 10px; left: 10px; z-index: 999;
-      background: rgba(0,0,0,0.85); padding: 15px; border-radius: 12px;
-      border: 1px solid var(--accent); width: 260px;
-      transition: opacity 0.3s;
+    /* Controles */
+    .ui-panel {
+      position: absolute; top: 10px; left: 10px; z-index: 1000;
+      background: rgba(0,0,0,0.9); padding: 15px; border-radius: 12px;
+      border: 1px solid var(--accent); width: 280px;
+      transition: all 0.5s ease;
     }
+    .ui-hidden { transform: translateY(-120%); opacity: 0; pointer-events: none; }
     
-    input, button { width: 100%; margin-bottom: 8px; padding: 12px; border-radius: 8px; border: none; box-sizing: border-box; }
+    input, button { width: 100%; margin-bottom: 10px; padding: 12px; border-radius: 8px; border: none; font-size: 14px; }
     input { background: #111; color: white; border: 1px solid #333; }
-    button { background: var(--accent); color: #000; font-weight: bold; cursor: pointer; }
+    button { background: var(--accent); color: #000; font-weight: bold; cursor: pointer; text-transform: uppercase; }
 
-    #master-container { width: 100vw; height: 100vh; position: relative; }
-    
-    /* Ocultar elementos */
-    a-scene { display: none; }
-    .vr-active a-scene { display: block !important; }
-    .hidden { display: none !important; }
-    
-    /* Línea divisoria central para VR */
-    .vr-line {
-      position: absolute; left: 50%; top: 0; bottom: 0;
-      width: 2px; background: rgba(255,255,255,0.2);
-      z-index: 100; display: none;
+    /* Botón flotante para volver a mostrar controles */
+    #showControls {
+      position: absolute; bottom: 20px; left: 20px; z-index: 1001;
+      background: rgba(255,255,255,0.2); border: none; border-radius: 50%;
+      width: 40px; height: 40px; color: white; display: none;
     }
-    .vr-active .vr-line { display: block; }
+
+    #master-container { width: 100vw; height: 100vh; background: #000; }
+    
+    /* Línea de alineación central */
+    .guide-line {
+      position: absolute; left: 50%; top: 0; bottom: 0;
+      width: 1px; background: rgba(255,255,255,0.3); z-index: 100;
+      display: none;
+    }
+    .vr-mode .guide-line { display: block; }
+
+    a-scene { display: none; }
+    .vr-mode a-scene { display: block !important; }
   </style>
 
   <script type="importmap">
     { "imports": { "hls.js": "https://esm.sh/hls.js@1.4.12" } }
   </script>
 </head>
-<body>
+<body class="vr-mode">
 
-  <div class="ui-overlay" id="ui">
-    <h3 style="margin:0 0 10px 0; color:var(--accent)">Stereo VR Player</h3>
-    <input id="urlIn" type="text" placeholder="Link .m3u8 o YouTube">
-    <button onclick="lanzarVR()">▶ INICIAR VR</button>
-    <p style="font-size: 11px; color: #888; margin: 5px 0;">Pega el link y el modo VR dividirá la pantalla automáticamente.</p>
+  <div class="ui-panel" id="ui">
+    <h3 style="margin:0 0 10px 0; color:var(--accent); text-align: center;">Modo VR Sincronizado</h3>
+    <input id="urlInput" type="text" placeholder="Link .m3u8 o mp4">
+    <button onclick="activarCineVR()">Entrar en Pantalla Completa</button>
+    <p style="font-size: 10px; color: #aaa; text-align: center;">Presiona el botón para ocultar controles y centrar imagen.</p>
   </div>
 
+  <button id="showControls" onclick="toggleUI()">⚙️</button>
+
   <div id="master-container">
-    <div class="vr-line"></div>
+    <div class="guide-line"></div>
     
-    <video id="vidNormal" controls style="width:100%; height:100%; object-fit: contain;"></video>
-    
-    <a-scene id="escenaVR" embedded loading-screen="enabled: false" device-orientation-permission-ui="enabled: true">
+    <a-scene id="escena" embedded loading-screen="enabled: false" device-orientation-permission-ui="enabled: true">
       <a-assets>
-        <video id="assetVid" autoplay crossorigin="anonymous" playsinline></video>
+        <video id="videoAsset" autoplay crossorigin="anonymous" playsinline></video>
       </a-assets>
 
-      <a-video src="#assetVid" width="8" height="4.5" position="-4.5 1.6 -10"></a-video>
-      
-      <a-video src="#assetVid" width="8" height="4.5" position="4.5 1.6 -10"></a-video>
+      <a-video src="#videoAsset" width="8" height="4.5" position="-4.2 1.6 -8"></a-video>
+      <a-video src="#videoAsset" width="8" height="4.5" position="4.2 1.6 -8"></a-video>
 
       <a-entity camera look-controls position="0 1.6 0">
-        <a-cursor color="var(--accent)" fuse="true" timeout="1500"></a-cursor>
+        <a-cursor color="var(--accent)" scale="0.5 0.5 0.5"></a-cursor>
       </a-entity>
 
-      <a-sky color="#000"></a-sky>
+      <a-sky color="#050505"></a-sky>
     </a-scene>
   </div>
 
   <script type="module">
     import Hls from "hls.js";
 
-    const vNormal = document.getElementById('vidNormal');
-    const vVR = document.getElementById('assetVid');
-    const container = document.getElementById('master-container');
+    const ui = document.getElementById('ui');
+    const vVR = document.getElementById('videoAsset');
+    const btnShow = document.getElementById('showControls');
     const hls = new Hls();
 
-    window.lanzarVR = function() {
-      const url = document.getElementById('urlIn').value.trim();
+    window.activarCineVR = function() {
+      const url = document.getElementById('urlInput').value.trim();
       if(!url) return alert("Pega un link primero");
 
-      // Activar visualización dividida
-      container.classList.add('vr-active');
-      document.getElementById('ui').style.opacity = "0.1"; // Atenuar UI
-      vNormal.classList.add('hidden');
+      // 1. Cargar Video
+      cargarVideo(url);
 
-      if (url.includes("youtube.com") || url.includes("youtu.be")) {
-        // Nota: YouTube bloquea la duplicación directa por seguridad.
-        // Se recomienda usar links directos .m3u8 para el efecto 3D real.
-        alert("Para YouTube, usa el botón 'Mirar en RV' nativo del video que viste en tu captura.");
-        container.classList.remove('vr-active');
-        vNormal.classList.remove('hidden');
+      // 2. Intentar Pantalla Completa (Full Screen API)
+      const docEl = document.documentElement;
+      if (docEl.requestFullscreen) docEl.requestFullscreen();
+      else if (docEl.webkitRequestFullscreen) docEl.webkitRequestFullscreen();
+
+      // 3. Ocultar Interfaz
+      toggleUI(false);
+      btnShow.style.display = 'block';
+    }
+
+    window.toggleUI = function(show = true) {
+      if(show) {
+        ui.classList.remove('ui-hidden');
       } else {
-        cargarStream(vVR, url);
+        ui.classList.add('ui-hidden');
       }
     }
 
-    function cargarStream(elemento, url) {
+    function cargarVideo(url) {
       if (Hls.isSupported() && url.includes(".m3u8")) {
         hls.destroy();
         const newHls = new Hls();
         newHls.loadSource(url);
-        newHls.attachMedia(elemento);
-        newHls.on(Hls.Events.MANIFEST_PARSED, () => elemento.play());
+        newHls.attachMedia(vVR);
+        newHls.on(Hls.Events.MANIFEST_PARSED, () => vVR.play());
       } else {
-        elemento.src = url;
-        elemento.play();
+        vVR.src = url;
+        vVR.play();
       }
     }
+
+    // Escuchar cambios de orientación para re-ajustar si es necesario
+    window.addEventListener("orientationchange", () => {
+      setTimeout(() => { window.scrollTo(0,1); }, 500);
+    });
   </script>
 </body>
 </html>
