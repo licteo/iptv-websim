@@ -3,113 +3,94 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no" />
-  <title>IPTV VR Cardboard Pro</title>
-
+  <title>IPTV VR Fixed Cinema</title>
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
 
   <style>
     :root{--accent:#00d4ff;--bg:#000}
-    body{margin:0;background:var(--bg);color:white;font-family:sans-serif;overflow:hidden}
+    body{margin:0;background:var(--bg);overflow:hidden;font-family:sans-serif}
     
-    /* UI de Configuración */
-    .ui-overlay {
+    .ui-panel {
       position: absolute; top: 20px; left: 20px; z-index: 1000;
-      background: rgba(15, 23, 32, 0.95); padding: 20px; border-radius: 15px;
-      border: 1px solid var(--accent); width: 300px; transition: 0.4s;
+      background: rgba(10, 15, 25, 0.9); padding: 20px; border-radius: 12px;
+      border: 1px solid var(--accent); width: 280px; transition: 0.5s;
     }
-    .ui-hidden { opacity: 0; pointer-events: none; transform: scale(0.9); }
+    .hidden { opacity: 0; pointer-events: none; transform: translateY(-20px); }
     
-    input { width: 100%; padding: 12px; margin-bottom: 12px; border-radius: 8px; border: 1px solid #333; background: #000; color: white; box-sizing: border-box; }
-    button { width: 100%; padding: 15px; background: var(--accent); color: #000; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+    input { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 6px; border: 1px solid #333; background: #000; color: white; box-sizing: border-box; }
+    button { width: 100%; padding: 15px; background: var(--accent); color: #000; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
 
-    /* Línea de calibración central (estilo YouTube VR) */
-    .center-line {
-      position: absolute; left: 50%; top: 10%; bottom: 10%;
-      width: 1px; background: rgba(255,255,255,0.4); z-index: 100;
-      pointer-events: none; display: none;
+    /* Línea guía central */
+    .guide-line {
+      position: absolute; left: 50%; top: 0; bottom: 0;
+      width: 2px; background: rgba(255,255,255,0.3); z-index: 100;
+      pointer-events: none;
     }
-    .vr-active .center-line { display: block; }
-
-    #vr-display { width: 100vw; height: 100vh; }
   </style>
 
   <script type="importmap">
     { "imports": { "hls.js": "https://esm.sh/hls.js@1.4.12" } }
   </script>
 </head>
-<body class="vr-active">
+<body>
 
-  <div class="center-line"></div>
+  <div class="guide-line"></div>
 
-  <div class="ui-overlay" id="menu">
-    <h2 style="margin:0 0 15px 0; font-size: 18px; color: var(--accent)">Modo RV Sincronizado</h2>
-    <input id="url" type="text" placeholder="URL del canal .m3u8 o mp4">
-    <button onclick="iniciarModoVR()">ACTIVAR MODO RV</button>
-    <p style="font-size: 11px; color: #777; margin-top: 10px; text-align: center;">
-      Calidad recomendada: 1080p. <br>Usa la línea blanca para centrar el móvil.
-    </p>
+  <div class="ui-panel" id="controls">
+    <h3 style="margin:0 0 10px 0; color:var(--accent)">VR Cinema Pro</h3>
+    <input id="videoUrl" type="text" placeholder="URL .m3u8 o mp4">
+    <button onclick="comenzarVR()">ENTRAR AL CINE VR</button>
   </div>
 
-  <div id="vr-display">
-    <a-scene embedded loading-screen="enabled: false" device-orientation-permission-ui="enabled: true">
-      
-      <a-assets>
-        <video id="videoSource" autoplay crossorigin="anonymous" playsinline></video>
-      </a-assets>
+  <a-scene embedded loading-screen="enabled: false" device-orientation-permission-ui="enabled: true">
+    <a-assets>
+      <video id="stream" autoplay crossorigin="anonymous" playsinline></video>
+    </a-assets>
 
-      <a-video src="#videoSource" width="7" height="4" position="-3.8 1.6 -7" rotation="0 5 0"></a-video>
-      <a-video src="#videoSource" width="7" height="4" position="3.8 1.6 -7" rotation="0 -5 0"></a-video>
+    <a-entity id="cinema-screen" position="0 1.6 -6">
+        <a-video src="#stream" width="6.5" height="3.6" position="-3.4 0 0" rotation="0 2 0"></a-video>
+        <a-video src="#stream" width="6.5" height="3.6" position="3.4 0 0" rotation="0 -2 0"></a-video>
+    </a-entity>
 
-      <a-entity camera look-controls position="0 1.6 0">
-        <a-entity cursor="fuse: true; fuseTimeout: 1500"
-                  position="0 0 -1"
-                  geometry="primitive: ring; radiusInner: 0.02; radiusOuter: 0.03"
-                  material="color: #00d4ff; shader: flat">
-          <a-animation begin="fusing" easing="ease-in" attribute="scale" fill="forwards" from="1 1 1" to="0.1 0.1 0.1" dur="1500"></a-animation>
-        </a-entity>
+    <a-entity camera look-controls position="0 1.6 0">
+      <a-entity cursor="fuse: true; fuseTimeout: 2000"
+                position="0 0 -1"
+                geometry="primitive: ring; radiusInner: 0.015; radiusOuter: 0.02"
+                material="color: #00d4ff; shader: flat">
       </a-entity>
+    </a-entity>
 
-      <a-sky color="#020202"></a-sky>
-      
-      <a-grid static-body material="opacity: 0.1; color: #ffffff"></a-grid>
-
-    </a-scene>
-  </div>
+    <a-sky color="#050505"></a-sky>
+  </a-scene>
 
   <script type="module">
     import Hls from "hls.js";
-
-    const video = document.getElementById('videoSource');
-    const menu = document.getElementById('menu');
+    const v = document.getElementById('stream');
+    const panel = document.getElementById('controls');
     const hls = new Hls();
 
-    window.iniciarModoVR = function() {
-      const link = document.getElementById('url').value.trim();
-      if(!link) return alert("Pega un link primero");
+    window.comenzarVR = function() {
+      const url = document.getElementById('videoUrl').value.trim();
+      if(!url) return;
 
-      // 1. Cargar el stream
-      if (Hls.isSupported() && link.includes(".m3u8")) {
-        hls.loadSource(link);
-        hls.attachMedia(video);
-        hls.on(Hls.Events.MANIFEST_PARSED, () => video.play());
+      if (Hls.isSupported() && url.includes(".m3u8")) {
+        hls.loadSource(url);
+        hls.attachMedia(v);
+        hls.on(Hls.Events.MANIFEST_PARSED, () => v.play());
       } else {
-        video.src = link;
-        video.play();
+        v.src = url;
+        v.play();
       }
 
-      // 2. Pantalla completa real
+      // Pantalla completa
       const el = document.documentElement;
       if (el.requestFullscreen) el.requestFullscreen();
-      else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
 
-      // 3. Ocultar menú
-      menu.classList.add('ui-hidden');
+      panel.classList.add('hidden');
     }
 
-    // Permitir reabrir menú con doble toque
-    document.body.addEventListener('dblclick', () => {
-      menu.classList.toggle('ui-hidden');
-    });
+    // Doble clic para volver a ver el menú
+    document.body.addEventListener('dblclick', () => panel.classList.toggle('hidden'));
   </script>
 </body>
 </html>
