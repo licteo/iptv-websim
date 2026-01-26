@@ -4,199 +4,321 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover" />
   <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="IPTV Player" />
   <meta name="theme-color" content="#00d4ff" />
-  <title>Reproductor IPTV VR Final</title>
+  <title>Reproductor IPTV VR</title>
 
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
 
   <style>
-    :root{--bg:#0f1720;--accent:#00d4ff;--danger:#ff4444}
-    *{box-sizing:border-box;font-family:sans-serif}
-    body,html{height:100%;margin:0;background:#051019;color:#fff;overflow:hidden}
+    :root{--bg:#0f1720;--card:#141922;--muted:#9aa4af;--accent:#00d4ff;--danger:#ff4444}
+    *{box-sizing:border-box;font-family:system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial}
+    html,body{height:100%;margin:0;background:linear-gradient(180deg,#051019 0%, #071424 100%);color:#e6eef6}
+    .container{max-width:980px;margin:18px auto;padding:18px}
+    h1{margin:0 0 12px 0;font-size:20px;text-align:center;color:var(--accent)}
+    .input-section{display:flex;gap:8px;margin:8px 0;flex-wrap:wrap}
+    input[type="text"]{flex:1;padding:10px 12px;border-radius:8px;border:1px solid #22303a;background:#0b1115;color:#e6eef6}
+    .file-input{padding:8px}
+    button{background:var(--accent);color:#002;border:none;padding:10px 12px;border-radius:8px;cursor:pointer}
+    .btn-secondary{background:#2b3940;color:#e6eef6}
+    .btn-danger{background:var(--danger)}
+    .btn-vr{background:#ff00ff; color:#fff; font-weight:bold; box-shadow:0 0 10px #ff00ff}
     
-    /* UI 2D (Fuera de VR) */
-    .container{max-width:800px;margin:20px auto;padding:15px; position:absolute; inset:0; overflow-y:auto; z-index:2}
-    .input-group{display:flex;gap:10px;margin-bottom:10px}
-    input{flex:1;padding:10px;background:#141922;border:1px solid #333;color:#fff;border-radius:5px}
-    button{padding:10px 15px;background:var(--accent);border:none;border-radius:5px;font-weight:bold;cursor:pointer;color:#000}
-    .btn-vr{background:#ff00ff;color:#fff}
-    .channel-list{background:#111;border-radius:5px;max-height:200px;overflow-y:auto}
-    .item{padding:10px;border-bottom:1px solid #222;cursor:pointer}
-    .item:hover{background:#222}
-
-    /* CAPA VR */
-    #vr-layer{display:none;position:fixed;inset:0;z-index:1}
-    body.is-vr #vr-layer{display:block}
-    body.is-vr .container{display:none}
-
-    /* Botón Salir VR Flotante */
+    /* BOTÓN PARA SALIR DE VR */
     #btn-exit-vr {
-      display:none; position:fixed; top:20px; left:50%; transform:translateX(-50%);
-      z-index:9999; background:red; color:white; padding:10px 20px; border-radius:30px; border:2px solid white;
+      display: none; position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+      z-index: 1000; background: var(--danger); color: white; padding: 10px 20px;
+      border-radius: 20px; font-weight: bold; border: 2px solid white;
     }
-    body.is-vr #btn-exit-vr{display:block}
+    body.is-vr #btn-exit-vr { display: block; }
+
+    .search-container{flex:1;display:flex;align-items:center;gap:6px}
+    .search-input{flex:1;padding:8px;border-radius:8px;border:1px solid #22303a;background:#071018;color:#e6eef6}
+    .favorites-toggle{display:flex;align-items:center;gap:6px;color:var(--muted)}
+    .channel-list{margin-top:10px;background:linear-gradient(180deg,#071018,#061014);border-radius:10px;padding:8px;min-height:80px;max-height:240px;overflow:auto;border:1px solid #16202a}
+    .channel-item{padding:10px;border-radius:8px;background:transparent;border:1px solid transparent;display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;cursor:pointer}
+    .channel-item:hover{background:#081118;border-color:#16313d}
+    .star{background:transparent;border:0;color:var(--muted);font-size:18px;cursor:pointer}
+    .video-container{margin-top:12px;background:var(--card);padding:8px;border-radius:10px;border:1px solid #16202a; position:relative;}
     
-    video { display: none; } /* El video se renderiza en el canvas, ocultamos el elemento DOM */
+    .player-shell{width:100%;height:520px;border-radius:6px;overflow:hidden;background:black;display:block; position:relative;}
+    video, iframe{width:100%;height:100%;display:block;border-radius:6px;background:black;border:0}
+    
+    body.is-vr .container { display: none; }
+    #vr-layer { display: none; position: fixed; inset: 0; z-index: 10; background: #000; }
+    body.is-vr #vr-layer { display: block; }
+    body.is-vr .player-shell { 
+      position: fixed; inset: 0; width: 100vw; height: 100vh; 
+      z-index: 100; opacity: 0.1;
+    }
+    .divisor-fijo {
+      position: absolute; left: 50%; top: 0; bottom: 0; width: 2px;
+      background: rgba(255,255,255,0.3); z-index: 50; display: none; pointer-events: none;
+    }
+    body.is-vr .divisor-fijo { display: block; }
+
+    .channel-controls{display:flex;gap:8px;align-items:center;margin-top:8px;justify-content:center}
+    .channel-btn{padding:8px 12px;border-radius:6px;border:0;background:#0b1318;color:#dfeafb;cursor:pointer}
+    .current-channel-info{color:var(--muted);font-size:14px}
+    .loading{position:relative;text-align:center;color:var(--muted);padding:6px;font-size:14px}
+    .empty-message{color:var(--muted);margin:12px 0;text-align:center}
+    @media (max-width:900px){ .player-shell{height:420px} }
+    @media (max-width:640px){ .player-shell{height:320px} }
   </style>
 
-  <script type="importmap">{ "imports": { "hls.js": "https://esm.sh/hls.js@1.4.12" } }</script>
+  <script type="importmap">
+  { "imports": { "hls.js": "https://esm.sh/hls.js@1.4.12" } }
+  </script>
 </head>
 <body>
 
-  <video id="videoPlayer" playsinline webkit-playsinline crossorigin="anonymous"></video>
-
-  <button id="btn-exit-vr" onclick="toggleVR()">SALIR VR</button>
+  <button id="btn-exit-vr" onclick="toggleVR()">CERRAR MODO VR</button>
 
   <div id="vr-layer">
+    <div class="divisor-fijo"></div>
     <a-scene embedded loading-screen="enabled: false" vr-mode-ui="enabled: false">
       
       <a-entity camera look-controls position="0 1.6 0">
-        <a-entity id="cursor-visual" 
-                  cursor="fuse: false; raycaster: .clickable"
-                  raycaster="objects: .clickable; far: 20"
-                  position="0 0 -1"
-                  geometry="primitive: ring; radiusInner: 0.02; radiusOuter: 0.03"
-                  material="color: white; shader: flat; opacity: 0.8">
-        </a-entity>
+         <a-entity id="cursor-visual" 
+                   cursor="fuse: false; raycaster: .clickable"
+                   raycaster="objects: .clickable; far: 20"
+                   position="0 0 -1"
+                   geometry="primitive: ring; radiusInner: 0.02; radiusOuter: 0.03"
+                   material="color: white; shader: flat; opacity: 0.8">
+         </a-entity>
       </a-entity>
 
-      <a-entity position="0 0 -3.8">
+      <a-entity id="pantallas-vr" position="0 0 -3.5">
         <a-video src="#videoPlayer" width="5.2" height="2.9" position="-2.65 0 0"></a-video>
         <a-video src="#videoPlayer" width="5.2" height="2.9" position="2.65 0 0"></a-video>
 
-        <a-circle class="clickable" data-action="prev" position="-0.8 -2 0.5" radius="0.35" color="#00d4ff" opacity="0.9">
-          <a-text value="<" align="center" position="0 0 0.05" scale="2 2 2" color="#000"></a-text>
+        <a-circle class="clickable" data-action="prev" position="-1 -2 0.5" radius="0.4" color="#00d4ff" opacity="0.9">
+          <a-text value="<" align="center" position="0 0 0.05" scale="2.5 2.5 2.5" color="#000"></a-text>
         </a-circle>
         
-        <a-circle class="clickable" data-action="next" position="0.8 -2 0.5" radius="0.35" color="#00d4ff" opacity="0.9">
-          <a-text value=">" align="center" position="0 0 0.05" scale="2 2 2" color="#000"></a-text>
+        <a-circle class="clickable" data-action="next" position="1 -2 0.5" radius="0.4" color="#00d4ff" opacity="0.9">
+          <a-text value=">" align="center" position="0 0 0.05" scale="2.5 2.5 2.5" color="#000"></a-text>
         </a-circle>
-
       </a-entity>
 
-      <a-sky color="#050505"></a-sky>
+      <a-sky color="#000"></a-sky>
     </a-scene>
   </div>
 
   <div class="container">
-    <h1>IPTV VR Shinacon</h1>
-    
-    <div class="input-group">
-      <input id="urlInput" type="text" placeholder="Pega enlace m3u8 o mp4..." />
-      <button id="btnLoadUrl">Ver Canal</button>
-      <button onclick="toggleVR()" class="btn-vr">ENTRAR VR</button>
+    <h1>Reproductor IPTV VR</h1>
+
+    <div class="input-section">
+      <input id="channelUrl" type="text" placeholder="URL .m3u8, mp4, youtube..." />
+      <button id="loadChannel">Cargar Canal</button>
+      <button onclick="toggleVR()" class="btn-vr">MODO VR</button>
     </div>
 
-    <div class="input-group">
-      <input id="fileInput" type="file" accept=".m3u" style="color:white">
-      <button id="btnLoadFile" style="background:#444;color:#fff">Cargar Lista</button>
+    <div class="input-section">
+      <input id="m3uFile" type="file" accept=".m3u,.m3u8" class="file-input" />
+      <button id="loadList" class="btn-secondary">Cargar Lista M3U</button>
+      <button id="clearList" class="btn-danger">Limpiar Lista</button>
     </div>
 
-    <div id="lista" class="channel-list"></div>
+    <div class="input-section">
+      <div class="search-container">
+        <input id="searchInput" class="search-input" placeholder="Buscar canal..." />
+      </div>
+      <label class="favorites-toggle">
+        <input id="favoritesToggle" type="checkbox" />
+        <span class="toggle-label">★ Solo Favoritos</span>
+      </label>
+    </div>
+
+    <div id="channelList" class="channel-list">
+      <p class="empty-message">No hay canales cargados</p>
+    </div>
+
+    <div class="video-container" id="playerArea">
+      <div id="playerRoot" class="player-shell">
+        <video id="videoPlayer" controls playsinline webkit-playsinline></video>
+      </div>
+      <div id="loading" class="loading" style="display:none">Cargando...</div>
+
+      <div class="channel-controls">
+        <button id="prevChannel" class="channel-btn">◀ Anterior</button>
+        <button id="favoriteCurrent" class="channel-btn" title="Marcar como favorito">★</button>
+        <span id="currentChannelInfo" class="current-channel-info"></span>
+        <button id="nextChannel" class="channel-btn">Siguiente ▶</button>
+      </div>
+    </div>
   </div>
 
   <script type="module">
     import Hls from "hls.js";
 
-    // --- LÓGICA DEL REPRODUCTOR ---
-    const video = document.getElementById('videoPlayer');
-    const state = { channels: [], index: 0 };
-    let hls = null;
-
-    window.toggleVR = () => {
+    window.toggleVR = function() {
       const isVr = document.body.classList.toggle('is-vr');
-      if(isVr) document.documentElement.requestFullscreen().catch(()=>{});
-      else if(document.fullscreenElement) document.exitFullscreen();
+      if (isVr) {
+        if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
+      } else {
+        if (document.exitFullscreen) document.exitFullscreen();
+      }
     };
 
-    function playUrl(url) {
-      if(hls) { hls.destroy(); hls = null; }
-      if(url.includes('.m3u8')) {
-        hls = new Hls();
-        hls.loadSource(url);
-        hls.attachMedia(video);
-        hls.on(Hls.Events.MANIFEST_PARSED, () => video.play());
-      } else {
-        video.src = url;
-        video.play();
-      }
+    window.addEventListener('keydown', (e) => {
+      if(e.key === 'Escape' && document.body.classList.contains('is-vr')) toggleVR();
+    });
+
+    const state = { channels: [], currentIndex: -1 };
+    const channelUrl = document.getElementById('channelUrl');
+    const loadChannelBtn = document.getElementById('loadChannel');
+    const m3uFile = document.getElementById('m3uFile');
+    const loadListBtn = document.getElementById('loadList');
+    const clearListBtn = document.getElementById('clearList');
+    const channelList = document.getElementById('channelList');
+    const searchInput = document.getElementById('searchInput');
+    const favoritesToggle = document.getElementById('favoritesToggle');
+    const videoPlayer = document.getElementById('videoPlayer');
+    const playerRoot = document.getElementById('playerRoot');
+    const loading = document.getElementById('loading');
+    const prevChannelBtn = document.getElementById('prevChannel');
+    const nextChannelBtn = document.getElementById('nextChannel');
+    const favoriteCurrentBtn = document.getElementById('favoriteCurrent');
+    const currentChannelInfo = document.getElementById('currentChannelInfo');
+
+    let hls = null;
+
+    function showLoading(show=true){ loading.style.display = show ? 'block' : 'none' }
+    function isYouTube(url){ return /youtu\.be|youtube\.com/.test(url); }
+    function isHls(url){ return /\.m3u8($|\?)/i.test(url) || url.includes('.m3u8'); }
+    function canVideoPlay(url){ return /\.(mp4|webm|ogg)(\?.*)?$/i.test(url); }
+
+    function saveStateToLocal(){ localStorage.setItem('iptv_channels_v1', JSON.stringify(state.channels)); }
+    function loadStateFromLocal(){
+      const raw = localStorage.getItem('iptv_channels_v1');
+      if(raw) { try{ state.channels = JSON.parse(raw); } catch(e){ state.channels = [] } }
     }
 
-    function changeChannel(dir) {
-      if(state.channels.length === 0) return;
-      state.index = (state.index + dir + state.channels.length) % state.channels.length;
-      playUrl(state.channels[state.index].url);
-      
-      // Feedback visual temporal (Opcional: un parpadeo en consola o pantalla)
-      console.log("Cambiando canal a: " + state.channels[state.index].title);
-    }
-
-    // --- MANEJO DE LISTAS ---
-    function renderList() {
-      const el = document.getElementById('lista');
-      el.innerHTML = state.channels.map((c,i) => 
-        `<div class="item" onclick="playIndex(${i})">${c.title}</div>`
-      ).join('');
-    }
-    
-    window.playIndex = (i) => { state.index = i; playUrl(state.channels[i].url); }
-
-    document.getElementById('btnLoadUrl').onclick = () => {
-      const url = document.getElementById('urlInput').value;
-      if(url) { state.channels = [{title:"Canal Manual", url}]; state.index=0; playUrl(url); renderList(); }
-    }
-
-    document.getElementById('btnLoadFile').onclick = async () => {
-      const file = document.getElementById('fileInput').files[0];
-      if(!file) return;
-      const text = await file.text();
-      const lines = text.split('\n');
-      state.channels = [];
-      lines.forEach((line, i) => {
-        if(line.startsWith('#EXTINF')) {
-          state.channels.push({title: line.split(',')[1] || "Canal", url: lines[i+1].trim()});
-        }
+    function renderList(){
+      const q = (searchInput.value||'').toLowerCase().trim();
+      const onlyFav = favoritesToggle.checked;
+      channelList.innerHTML = '';
+      const filtered = state.channels.filter(c=>{
+        if(onlyFav && !c.favorite) return false;
+        if(q && !(c.title||'').toLowerCase().includes(q) && !(c.url||'').toLowerCase().includes(q)) return false;
+        return true;
       });
+      if(filtered.length===0){
+        channelList.innerHTML = '<p class="empty-message">No hay canales cargados</p>';
+        return;
+      }
+      filtered.forEach((ch, idx)=>{
+        const item = document.createElement('div');
+        item.className = 'channel-item';
+        item.onclick = () => { const realIndex = state.channels.indexOf(ch); playIndex(realIndex); };
+        const left = document.createElement('div');
+        left.innerHTML = `<strong style="display:block">${ch.title||ch.url}</strong><small style="color:var(--muted)">${ch.url}</small>`;
+        const right = document.createElement('div');
+        const star = document.createElement('button');
+        star.className = 'star';
+        star.innerText = ch.favorite ? '★' : '☆';
+        star.onclick = (e) => { e.stopPropagation(); ch.favorite = !ch.favorite; saveStateToLocal(); renderList(); };
+        right.appendChild(star);
+        item.appendChild(left); item.appendChild(right);
+        channelList.appendChild(item);
+      });
+    }
+
+    async function playUrl(url){
+      showLoading(true);
+      currentChannelInfo.textContent = url;
+      if(isYouTube(url)){
+        playerRoot.innerHTML = '';
+        const iframe = document.createElement('iframe');
+        iframe.allowFullscreen = true;
+        iframe.src = url.replace("watch?v=", "embed/");
+        playerRoot.appendChild(iframe);
+        showLoading(false);
+        return;
+      }
+      playerRoot.innerHTML = '';
+      playerRoot.appendChild(videoPlayer);
+      videoPlayer.pause();
+      if(hls){ hls.destroy(); hls = null; }
+
+      try{
+        if(isHls(url)){
+          hls = new Hls(); hls.loadSource(url); hls.attachMedia(videoPlayer);
+          hls.on(Hls.Events.MANIFEST_PARSED, () => videoPlayer.play());
+        } else {
+          videoPlayer.src = url; videoPlayer.play();
+        }
+      }catch(err){ console.error(err); } finally { showLoading(false); }
+    }
+
+    function playIndex(i){
+      if(i < 0 || i >= state.channels.length) return;
+      state.currentIndex = i;
+      playUrl(state.channels[i].url);
       renderList();
     }
 
+    loadChannelBtn.addEventListener('click', ()=>{
+      const url = channelUrl.value.trim();
+      if(url){ state.channels.push({title: url, url, favorite:false}); saveStateToLocal(); renderList(); playIndex(state.channels.length-1); }
+    });
+
+    loadListBtn.addEventListener('click', async ()=>{
+      const file = m3uFile.files[0];
+      if(!file) return;
+      const text = await file.text();
+      const lines = text.split('\n');
+      lines.forEach((line, i) => {
+        if(line.startsWith('#EXTINF')) state.channels.push({title: line.split(',')[1] || "Canal", url: lines[i+1].trim(), favorite:false});
+      });
+      saveStateToLocal(); renderList();
+    });
+
+    clearListBtn.addEventListener('click', ()=>{ state.channels = []; saveStateToLocal(); renderList(); });
+    nextChannelBtn.addEventListener('click', () => playIndex((state.currentIndex + 1) % state.channels.length));
+    prevChannelBtn.addEventListener('click', () => playIndex((state.currentIndex - 1 + state.channels.length) % state.channels.length));
+    
     // ==========================================================
-    // === SOLUCIÓN "GATILLO UNIVERSAL" PARA CONTROL MÓVIL ===
+    // === NUEVA FUNCIÓN AGREGADA: GATILLO UNIVERSAL PARA VR ===
     // ==========================================================
     
-    // Esta función se ejecuta CADA VEZ que haces clic en la pantalla 
-    // (con el dedo o con el botón del control mouse).
     function universalClicker(e) {
-      // 1. Solo actuar si estamos en modo VR
+      // Solo actuar si estamos en VR
       if (!document.body.classList.contains('is-vr')) return;
 
-      // 2. Buscar qué está mirando el aro blanco ahora mismo
+      // Detectar qué está mirando el cursor (Aro blanco)
       const cursor = document.getElementById('cursor-visual');
-      const raycaster = cursor.components.raycaster; // Obtener componente interno de A-Frame
-      const intersected = raycaster.intersectedEls;  // Lista de objetos que el rayo toca
+      if(!cursor) return;
+      const raycaster = cursor.components.raycaster;
+      const intersected = raycaster.intersectedEls;
 
       if (intersected.length > 0) {
-        // 3. Si estamos mirando algo, obtener el elemento
+        // Obtenemos el elemento mirado
         const target = intersected[0];
-        
-        // 4. Ver si tiene una acción definida (prev/next)
         const action = target.getAttribute('data-action');
         
-        if (action === 'prev') changeChannel(-1);
-        if (action === 'next') changeChannel(1);
+        // Ejecutamos la acción según el botón
+        if (action === 'prev') playIndex((state.currentIndex - 1 + state.channels.length) % state.channels.length);
+        if (action === 'next') playIndex((state.currentIndex + 1) % state.channels.length);
         
-        // Efecto visual de "pulsado" (se hace pequeño y vuelve)
-        target.setAttribute('scale', '0.9 0.9 0.9');
-        setTimeout(() => target.setAttribute('scale', '1 1 1'), 150);
+        // Efecto visual de pulsación
+        const originalScale = target.getAttribute('scale') || {x:1, y:1, z:1};
+        target.setAttribute('scale', {x: 0.9, y: 0.9, z: 0.9});
+        setTimeout(() => target.setAttribute('scale', {x: 1, y: 1, z: 1}), 150);
       }
     }
 
-    // Escuchamos clics, toques y mousedown globales
+    // Escuchar cualquier clic o toque en la pantalla
     window.addEventListener('click', universalClicker);
     window.addEventListener('touchstart', universalClicker);
-    
+
     // ==========================================================
 
+    loadStateFromLocal();
+    renderList();
   </script>
 </body>
 </html>
