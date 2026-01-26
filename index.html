@@ -3,102 +3,110 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no" />
-  <title>VR Sincronizado Perfecto</title>
+  <title>Shinacon VR Cinema</title>
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
 
   <style>
     body { margin: 0; background: #000; overflow: hidden; }
     
-    /* Línea de división exacta (Alineación con el tabique de las gafas) */
-    .linea-division {
-      position: absolute; left: 50%; top: 0; bottom: 0;
-      width: 2px; background: rgba(255,255,255,0.8);
-      box-shadow: 0 0 10px rgba(255,255,255,0.5);
-      z-index: 9999; pointer-events: none;
+    /* LÍNEA DIVISORIA VERTICAL (Exactamente en el centro) */
+    .divisor-central {
+      position: absolute;
+      left: 50%; top: 0; bottom: 0;
+      width: 1px;
+      background: rgba(255, 255, 255, 0.5);
+      z-index: 9999;
+      pointer-events: none;
+      display: none;
     }
+    .vr-active .divisor-central { display: block; }
 
-    #ui-inicio {
-      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-      background: #050a10; z-index: 10000; display: flex;
-      flex-direction: column; align-items: center; justify-content: center;
+    /* UI de entrada */
+    #config {
+      position: absolute; z-index: 10000; top: 0; left: 0; width: 100%; height: 100%;
+      background: #000; display: flex; align-items: center; justify-content: center;
     }
-    .caja { background: #111; padding: 25px; border-radius: 15px; border: 1px solid #00d4ff; width: 85%; max-width: 320px; }
-    input { width: 100%; padding: 12px; margin: 15px 0; border-radius: 5px; border: 1px solid #333; background: #000; color: #fff; }
-    button { width: 100%; padding: 15px; background: #00d4ff; border: none; border-radius: 5px; font-weight: bold; font-size: 16px; cursor: pointer; }
+    .panel { background: #111; padding: 30px; border-radius: 20px; border: 1px solid #00d4ff; width: 300px; text-align: center; }
+    input { width: 100%; padding: 12px; margin: 15px 0; border-radius: 8px; border: 1px solid #333; background: #000; color: #fff; box-sizing: border-box; }
+    button { width: 100%; padding: 15px; background: #00d4ff; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+    
+    /* Forzar rotación visual si el sistema falla */
+    @media screen and (orientation: portrait) {
+      #warning { display: block; position: fixed; top:0; left:0; width:100%; background:red; color:white; z-index:10001; text-align:center; padding:10px; }
+    }
+    #warning { display: none; }
   </style>
 
   <script type="importmap">
     { "imports": { "hls.js": "https://esm.sh/hls.js@1.4.12" } }
   </script>
 </head>
-<body>
+<body class="vr-active">
 
-  <div class="linea-division"></div>
+  <div id="warning">🔄 POR FAVOR, GIRA EL TELÉFONO A HORIZONTAL</div>
+  <div class="divisor-central"></div>
 
-  <div id="ui-inicio">
-    <div class="caja">
-      <h2 style="color:#00d4ff; margin:0; text-align:center;">Cine VR Pro</h2>
-      <input id="urlInput" type="text" placeholder="URL .m3u8 o mp4">
-      <button onclick="lanzarCine()">PANTALLA COMPLETA VR</button>
+  <div id="config">
+    <div class="panel">
+      <h2 style="color:#00d4ff; margin:0;">Shinacon VR</h2>
+      <input id="url" type="text" placeholder="Pega link .m3u8 o mp4">
+      <button onclick="iniciarVR()">INICIAR MODO GAFAS</button>
     </div>
   </div>
 
   <a-scene loading-screen="enabled: false" vr-mode-ui="enabled: false">
     <a-assets>
-      <video id="videoVr" autoplay crossorigin="anonymous" playsinline></video>
+      <video id="videoAsset" autoplay crossorigin="anonymous" playsinline></video>
     </a-assets>
 
-    <a-sky color="#020202"></a-sky>
+    <a-entity id="pantallas" position="0 1.6 -4.5">
+      <a-curvedimage src="#videoAsset" height="3.2" radius="5" theta-length="45"
+                     position="-2.7 0 0" rotation="0 158 0"></a-curvedimage>
 
-    <a-entity id="rig-pantallas" position="0 1.6 -5">
-      
-      <a-curvedimage src="#videoVr" height="3.5" radius="5.7" theta-length="42"
-                     position="-2.9 0 0.5" rotation="0 160 0"></a-curvedimage>
-
-      <a-curvedimage src="#videoVr" height="3.5" radius="5.7" theta-length="42"
-                     position="2.9 0 0.5" rotation="0 158 0"></a-curvedimage>
-      
+      <a-curvedimage src="#videoAsset" height="3.2" radius="5" theta-length="45"
+                     position="2.7 0 0" rotation="0 157 0"></a-curvedimage>
     </a-entity>
 
     <a-entity camera look-controls position="0 1.6 0">
-      <a-entity cursor="fuse: true; fuseTimeout: 1000"
+      <a-entity cursor="fuse: true; fuseTimeout: 1200"
                 position="0 0 -1"
                 geometry="primitive: ring; radiusInner: 0.01; radiusOuter: 0.015"
                 material="color: #00d4ff; shader: flat">
       </a-entity>
     </a-entity>
 
+    <a-sky color="#000"></a-sky>
   </a-scene>
 
   <script type="module">
     import Hls from "hls.js";
-    const video = document.getElementById('videoVr');
+    const v = document.getElementById('videoAsset');
     const hls = new Hls();
 
-    window.lanzarCine = function() {
-      const url = document.getElementById('urlInput').value.trim();
+    window.iniciarVR = function() {
+      const url = document.getElementById('url').value.trim();
       if(!url) return;
 
-      // Cargar el stream
       if (Hls.isSupported() && url.includes(".m3u8")) {
         hls.loadSource(url);
-        hls.attachMedia(video);
-        hls.on(Hls.Events.MANIFEST_PARSED, () => video.play());
+        hls.attachMedia(v);
+        hls.on(Hls.Events.MANIFEST_PARSED, () => v.play());
       } else {
-        video.src = url;
-        video.play();
+        v.src = url;
+        v.play();
       }
 
-      // Ocultar Interfaz
-      document.getElementById('ui-inicio').style.display = 'none';
+      document.getElementById('config').style.display = 'none';
 
-      // Pantalla Completa
+      // Forzar pantalla completa y ORIENTACIÓN HORIZONTAL
       const doc = document.documentElement;
-      if (doc.requestFullscreen) doc.requestFullscreen();
-      else if (doc.webkitRequestFullscreen) doc.webkitRequestFullscreen();
-
-      // Forzar al sensor a calibrar
-      window.dispatchEvent(new Event('resize'));
+      if (doc.requestFullscreen) {
+        doc.requestFullscreen().then(() => {
+          if (screen.orientation && screen.orientation.lock) {
+            screen.orientation.lock('landscape').catch(() => {});
+          }
+        });
+      }
     }
   </script>
 </body>
