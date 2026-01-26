@@ -3,107 +3,94 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover" />
-  <title>Shinacon IPTV Ultra Control</title>
+  <title>IPTV Player Normal VR</title>
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
   <style>
     :root{--accent:#00d4ff}
-    html,body{height:100%;margin:0;background:#000;color:#fff;overflow:hidden;font-family:sans-serif}
-    .container{padding:20px;max-width:800px;margin:auto}
-    #vr-layer{display:none;position:fixed;inset:0;z-index:9999}
-    .divisor-vr{position:absolute;left:50%;top:0;bottom:0;width:2px;background:rgba(255,255,255,0.3);z-index:100;pointer-events:none}
-    button{background:var(--accent);border:none;padding:12px;border-radius:8px;font-weight:bold;cursor:pointer}
-    input{padding:10px;border-radius:8px;border:1px solid #333;background:#111;color:#fff;width:60%}
-    .player-preview{width:100%;height:200px;background:#111;margin-top:20px;border-radius:10px}
+    body, html { margin: 0; padding: 0; height: 100%; background: #000; overflow: hidden; }
+    
+    /* Contenedor de la UI de selección */
+    #interface {
+      position: absolute; z-index: 100; width: 100%; height: 100%;
+      background: #0f1720; color: white; display: flex; flex-direction: column; align-items: center; padding: 20px;
+    }
+
+    /* EL SECRETO: El video real está oculto pero sus controles son los que tocas */
+    #videoPlayer {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 50; /* Por encima de la escena VR para recibir el tacto */
+      opacity: 0.01; /* Casi invisible para que veas el VR, pero que reciba los clics */
+    }
+
+    .divisor {
+      position: absolute; left: 50%; top: 0; bottom: 0; width: 2px;
+      background: rgba(255,255,255,0.3); z-index: 40; pointer-events: none;
+    }
+
+    input { padding: 12px; border-radius: 8px; border: none; width: 80%; margin: 10px; }
+    button { padding: 15px 30px; background: var(--accent); border: none; border-radius: 8px; font-weight: bold; }
   </style>
   <script type="importmap">{"imports":{"hls.js":"https://esm.sh/hls.js@1.4.12"}}</script>
 </head>
 <body>
 
-  <div id="vr-layer">
-    <div class="divisor-vr"></div>
-    <a-scene embedded loading-screen="enabled:false" vr-mode-ui="enabled:false">
-      <a-assets>
-        <video id="videoVr" crossorigin="anonymous" playsinline></video>
-        <img id="icon-play" src="https://img.icons8.com/ios-filled/100/ffffff/play.png">
-        <img id="icon-pause" src="https://img.icons8.com/ios-filled/100/ffffff/pause.png">
-        <img id="icon-vol-up" src="https://img.icons8.com/ios-filled/100/ffffff/volume-up.png">
-        <img id="icon-vol-down" src="https://img.icons8.com/ios-filled/100/ffffff/volume-low.png">
-      </a-assets>
-
-      <a-entity camera look-controls position="0 1.6 0">
-        <a-entity id="main-panel" position="0 0 -3.5">
-          <a-video src="#videoVr" width="5.2" height="2.9" position="-2.65 0.2 0"></a-video>
-          <a-video src="#videoVr" width="5.2" height="2.9" position="2.65 0.2 0"></a-video>
-
-          <a-entity id="controls-left" position="-2.65 -1.6 0">
-            <a-image class="clickable" src="#icon-vol-down" position="-0.8 0 0" width="0.3" height="0.3" onclick="volDown()"></a-image>
-            <a-image id="play-pause-L" class="clickable" src="#icon-pause" position="0 0 0" width="0.4" height="0.4" onclick="togglePlay()"></a-image>
-            <a-image class="clickable" src="#icon-vol-up" position="0.8 0 0" width="0.3" height="0.3" onclick="volUp()"></a-image>
-            <a-text value="SALIR" position="0 -0.5 0" align="center" class="clickable" scale="0.5 0.5 0.5" onclick="salirVR()"></a-text>
-          </a-entity>
-
-          <a-entity id="controls-right" position="2.65 -1.6 0">
-            <a-image class="clickable" src="#icon-vol-down" position="-0.8 0 0" width="0.3" height="0.3" onclick="volDown()"></a-image>
-            <a-image id="play-pause-R" class="clickable" src="#icon-pause" position="0 0 0" width="0.4" height="0.4" onclick="togglePlay()"></a-image>
-            <a-image class="clickable" src="#icon-vol-up" position="0.8 0 0" width="0.3" height="0.3" onclick="volUp()"></a-image>
-            <a-text value="SALIR" position="0 -0.5 0" align="center" class="clickable" scale="0.5 0.5 0.5" onclick="salirVR()"></a-text>
-          </a-entity>
-
-          <a-entity cursor="fuse:true; fuseTimeout:1000" raycaster="objects:.clickable"
-                    position="0 0 1" geometry="primitive:ring; radiusInner:0.015; radiusOuter:0.025"
-                    material="color:#00d4ff; shader:flat"></a-entity>
-        </a-entity>
-      </a-entity>
-      <a-sky color="#000"></a-sky>
-    </a-scene>
+  <div id="interface">
+    <h2>IPTV PLAYER VR</h2>
+    <input id="urlInput" type="text" placeholder="Pega tu link .m3u8 o mp4 aquí">
+    <button onclick="iniciarCine()">REPRODUCIR EN VR</button>
+    <p style="font-size: 12px; color: #9aa4af; margin-top: 20px;">
+      * Al entrar, toca la pantalla para ver los controles normales (Pausa, Volumen, Barra).
+    </p>
   </div>
 
-  <div class="container" id="ui-base">
-    <h1>IPTV VR Shinacon</h1>
-    <input id="url" type="text" placeholder="URL .m3u8 o mp4">
-    <button onclick="cargarYEntrar()">ENTRAR VR</button>
-    <div class="player-preview">
-       <p style="text-align:center; padding-top:80px; color:#555">Vista previa desactivada en modo normal</p>
-    </div>
-  </div>
+  <video id="videoPlayer" controls playsinline crossorigin="anonymous"></video>
+
+  <div id="divisor-vr" class="divisor" style="display: none;"></div>
+
+  <a-scene vr-mode-ui="enabled: false" loading-screen="enabled: false">
+    <a-entity camera position="0 1.6 0"></a-entity>
+    
+    <a-entity id="pantallas" position="0 1.6 -3">
+      <a-video src="#videoPlayer" width="4.5" height="2.5" position="-2.3 0 0"></a-video>
+      <a-video src="#videoPlayer" width="4.5" height="2.5" position="2.3 0 0"></a-video>
+    </a-entity>
+
+    <a-sky color="#000"></a-sky>
+  </a-scene>
 
   <script type="module">
     import Hls from "hls.js";
-    const v = document.getElementById('videoVr');
-    let hls = new Hls();
+    const video = document.getElementById('videoPlayer');
+    const ui = document.getElementById('interface');
+    const divisor = document.getElementById('divisor-vr');
+    const hls = new Hls();
 
-    window.cargarYEntrar = function() {
-      const url = document.getElementById('url').value;
+    window.iniciarCine = function() {
+      const url = document.getElementById('urlInput').value;
       if(!url) return;
-      
+
+      // Cargar Video
       if(url.includes('.m3u8')) {
-        hls.loadSource(url); hls.attachMedia(v);
-        hls.on(Hls.Events.MANIFEST_PARSED, () => v.play());
-      } else { v.src = url; v.play(); }
-
-      document.getElementById('vr-layer').style.display = 'block';
-      document.getElementById('ui-base').style.display = 'none';
-      document.documentElement.requestFullscreen();
-    }
-
-    // Funciones de control interactivo
-    window.togglePlay = function() {
-      const iconL = document.getElementById('play-pause-L');
-      const iconR = document.getElementById('play-pause-R');
-      if(v.paused) { 
-        v.play(); 
-        iconL.setAttribute('src', '#icon-pause'); 
-        iconR.setAttribute('src', '#icon-pause');
-      } else { 
-        v.pause(); 
-        iconL.setAttribute('src', '#icon-play'); 
-        iconR.setAttribute('src', '#icon-play');
+        hls.loadSource(url); hls.attachMedia(video);
+        hls.on(Hls.Events.MANIFEST_PARSED, () => video.play());
+      } else {
+        video.src = url; video.play();
       }
-    }
 
-    window.volUp = function() { if(v.volume < 1) v.volume += 0.1; }
-    window.volDown = function() { if(v.volume > 0) v.volume -= 0.1; }
-    window.salirVR = function() { location.reload(); }
+      // Cambiar a modo cine
+      ui.style.display = 'none';
+      divisor.style.display = 'block';
+      
+      // Intentar pantalla completa
+      if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
+    };
+
+    // Si el video entra en modo "controls" nativo, sincronizar
+    video.addEventListener('play', () => {
+        // Asegura que el video de A-Frame sepa que debe seguir reproduciendo
+    });
   </script>
 </body>
 </html>
