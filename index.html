@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="IPTV Player" />
   <meta name="theme-color" content="#00d4ff" />
-  <title>Reproductor IPTV</title>
+  <title>Reproductor IPTV con VR</title>
 
   <style>
     :root{--bg:#0f1720;--card:#141922;--muted:#9aa4af;--accent:#00d4ff;--danger:#ff4444}
@@ -19,7 +19,7 @@
     .input-section{display:flex;gap:8px;margin:8px 0;flex-wrap:wrap}
     input[type="text"]{flex:1;padding:10px 12px;border-radius:8px;border:1px solid #22303a;background:#0b1115;color:#e6eef6}
     .file-input{padding:8px}
-    button{background:var(--accent);color:#002;border:none;padding:10px 12px;border-radius:8px;cursor:pointer}
+    button{background:var(--accent);color:#002;border:none;padding:10px 12px;border-radius:8px;cursor:pointer;font-weight:500}
     .btn-secondary{background:#2b3940;color:#e6eef6}
     .btn-danger{background:var(--danger)}
     .search-container{flex:1;display:flex;align-items:center;gap:6px}
@@ -30,17 +30,20 @@
     .channel-item:hover{background:#081118;border-color:#16313d}
     .star{background:transparent;border:0;color:var(--muted);font-size:18px;cursor:pointer}
     .video-container{margin-top:12px;background:var(--card);padding:8px;border-radius:10px;border:1px solid #16202a}
-    /* Make player larger and responsive:
-       - desktop/tablet: taller (520px)
-       - mobile: use a comfortable height (320px)
-       - video/iframe fill the player area */
-    .player-shell{width:100%;height:520px;border-radius:6px;overflow:hidden;background:black;display:block}
+    .player-shell{width:100%;height:520px;border-radius:6px;overflow:hidden;background:black;display:block;position:relative}
     video, iframe{width:100%;height:100%;display:block;border-radius:6px;background:black;border:0}
-    .channel-controls{display:flex;gap:8px;align-items:center;margin-top:8px;justify-content:center}
+    .channel-controls{display:flex;gap:8px;align-items:center;margin-top:8px;justify-content:center;flex-wrap:wrap}
     .channel-btn{padding:8px 12px;border-radius:6px;border:0;background:#0b1318;color:#dfeafb;cursor:pointer}
+    .vr-btn{background:#8b5cf6;color:white;font-weight:600;padding:10px 16px}
+    .vr-btn:hover{background:#7c3aed}
+    .vr-btn.active{background:#22c55e}
     .current-channel-info{color:var(--muted);font-size:14px}
     .loading{position:relative;text-align:center;color:var(--muted);padding:6px;font-size:14px}
     .empty-message{color:var(--muted);margin:12px 0;text-align:center}
+    .vr-overlay{position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.8);display:none;justify-content:center;align-items:center;flex-direction:column;gap:16px;z-index:100;border-radius:6px}
+    .vr-overlay.active{display:flex}
+    .vr-info{color:white;font-size:16px;text-align:center;padding:0 20px}
+    .vr-exit-btn{background:#ff4444;color:white;padding:12px 24px;border-radius:8px;border:0;cursor:pointer;font-size:16px;font-weight:600}
     @media (max-width:900px){
       .player-shell{height:420px}
     }
@@ -52,14 +55,15 @@
   <script type="importmap">
   {
     "imports": {
-      "hls.js": "https://esm.sh/hls.js@1.4.12"
+      "hls.js": "https://esm.sh/hls.js@1.4.12",
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"
     }
   }
   </script>
 </head>
 <body>
   <div class="container">
-    <h1>Reproductor IPTV</h1>
+    <h1>🎬 Reproductor IPTV con VR</h1>
 
     <div class="input-section">
       <input id="channelUrl" type="text" placeholder="Pega la URL del canal (.m3u8, mp4, youtube...)" />
@@ -88,13 +92,18 @@
 
     <div class="video-container" id="playerArea">
       <div id="playerRoot" class="player-shell">
-        <video id="videoPlayer" controls playsinline webkit-playsinline></video>
+        <video id="videoPlayer" controls playsinline webkit-playsinline crossorigin="anonymous"></video>
+        <div id="vrOverlay" class="vr-overlay">
+          <div class="vr-info">🥽 Modo VR Activado<br>Mueve tu dispositivo o usa el mouse para mirar alrededor</div>
+          <button id="exitVR" class="vr-exit-btn">Salir de VR</button>
+        </div>
       </div>
       <div id="loading" class="loading" style="display:none">Cargando...</div>
 
       <div class="channel-controls">
         <button id="prevChannel" class="channel-btn">◀ Anterior</button>
         <button id="favoriteCurrent" class="channel-btn" title="Marcar como favorito">★</button>
+        <button id="vrToggle" class="vr-btn">🥽 Modo VR 360°</button>
         <span id="currentChannelInfo" class="current-channel-info"></span>
         <button id="nextChannel" class="channel-btn">Siguiente ▶</button>
       </div>
@@ -103,11 +112,13 @@
 
   <script type="module">
     import Hls from "hls.js";
+    import * as THREE from "three";
 
     // Estado
     const state = {
-      channels: [], // {title, url, favorite}
-      currentIndex: -1
+      channels: [],
+      currentIndex: -1,
+      vrMode: false
     };
 
     // Elementos
@@ -126,8 +137,186 @@
     const nextChannelBtn = document.getElementById('nextChannel');
     const favoriteCurrentBtn = document.getElementById('favoriteCurrent');
     const currentChannelInfo = document.getElementById('currentChannelInfo');
+    const vrToggle = document.getElementById('vrToggle');
+    const vrOverlay = document.getElementById('vrOverlay');
+    const exitVRBtn = document.getElementById('exitVR');
 
     let hls = null;
+    let vrScene = null;
+
+    // ----------------- VR Scene Setup -----------------
+    class VRScene {
+      constructor(container, video) {
+        this.container = container;
+        this.video = video;
+        this.isActive = false;
+        
+        // Three.js setup
+        this.scene = new THREE.Scene();
+        this.camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
+        this.camera.position.set(0, 0, 0.1);
+        
+        this.renderer = new THREE.WebGLRenderer({ antialias: true });
+        this.renderer.setSize(container.clientWidth, container.clientHeight);
+        this.renderer.domElement.style.position = 'absolute';
+        this.renderer.domElement.style.top = '0';
+        this.renderer.domElement.style.left = '0';
+        this.renderer.domElement.style.borderRadius = '6px';
+        
+        // Create sphere for 360 video
+        const geometry = new THREE.SphereGeometry(500, 60, 40);
+        geometry.scale(-1, 1, 1); // Invert sphere
+        
+        this.videoTexture = new THREE.VideoTexture(video);
+        this.videoTexture.minFilter = THREE.LinearFilter;
+        this.videoTexture.magFilter = THREE.LinearFilter;
+        
+        const material = new THREE.MeshBasicMaterial({ map: this.videoTexture });
+        this.sphere = new THREE.Mesh(geometry, material);
+        this.scene.add(this.sphere);
+        
+        // Controls
+        this.lat = 0;
+        this.lon = 0;
+        this.phi = 0;
+        this.theta = 0;
+        this.isUserInteracting = false;
+        this.onPointerDownPointerX = 0;
+        this.onPointerDownPointerY = 0;
+        this.onPointerDownLon = 0;
+        this.onPointerDownLat = 0;
+        
+        this.setupControls();
+      }
+      
+      setupControls() {
+        const canvas = this.renderer.domElement;
+        
+        canvas.addEventListener('pointerdown', (e) => {
+          this.isUserInteracting = true;
+          this.onPointerDownPointerX = e.clientX;
+          this.onPointerDownPointerY = e.clientY;
+          this.onPointerDownLon = this.lon;
+          this.onPointerDownLat = this.lat;
+        });
+        
+        canvas.addEventListener('pointermove', (e) => {
+          if (this.isUserInteracting) {
+            this.lon = (this.onPointerDownPointerX - e.clientX) * 0.1 + this.onPointerDownLon;
+            this.lat = (e.clientY - this.onPointerDownPointerY) * 0.1 + this.onPointerDownLat;
+          }
+        });
+        
+        canvas.addEventListener('pointerup', () => {
+          this.isUserInteracting = false;
+        });
+        
+        // Touch support
+        canvas.addEventListener('touchstart', (e) => {
+          if (e.touches.length === 1) {
+            this.isUserInteracting = true;
+            this.onPointerDownPointerX = e.touches[0].clientX;
+            this.onPointerDownPointerY = e.touches[0].clientY;
+            this.onPointerDownLon = this.lon;
+            this.onPointerDownLat = this.lat;
+          }
+        });
+        
+        canvas.addEventListener('touchmove', (e) => {
+          if (this.isUserInteracting && e.touches.length === 1) {
+            this.lon = (this.onPointerDownPointerX - e.touches[0].clientX) * 0.1 + this.onPointerDownLon;
+            this.lat = (e.touches[0].clientY - this.onPointerDownPointerY) * 0.1 + this.onPointerDownLat;
+          }
+        });
+        
+        canvas.addEventListener('touchend', () => {
+          this.isUserInteracting = false;
+        });
+        
+        // Mouse wheel zoom
+        canvas.addEventListener('wheel', (e) => {
+          e.preventDefault();
+          const fov = this.camera.fov + e.deltaY * 0.05;
+          this.camera.fov = Math.max(30, Math.min(120, fov));
+          this.camera.updateProjectionMatrix();
+        });
+        
+        // Device orientation for mobile VR
+        if (window.DeviceOrientationEvent) {
+          window.addEventListener('deviceorientation', (e) => {
+            if (this.isActive && e.alpha !== null) {
+              this.lon = e.alpha - 180;
+              this.lat = e.beta - 90;
+            }
+          });
+        }
+      }
+      
+      activate() {
+        if (this.isActive) return;
+        this.isActive = true;
+        
+        // Hide video element
+        this.video.style.display = 'none';
+        
+        // Add renderer to container
+        this.container.appendChild(this.renderer.domElement);
+        vrOverlay.classList.add('active');
+        
+        // Start animation loop
+        this.animate();
+        
+        // Handle resize
+        this.resizeHandler = () => this.onWindowResize();
+        window.addEventListener('resize', this.resizeHandler);
+      }
+      
+      deactivate() {
+        if (!this.isActive) return;
+        this.isActive = false;
+        
+        // Show video element
+        this.video.style.display = 'block';
+        
+        // Remove renderer
+        if (this.renderer.domElement.parentNode) {
+          this.renderer.domElement.parentNode.removeChild(this.renderer.domElement);
+        }
+        vrOverlay.classList.remove('active');
+        
+        window.removeEventListener('resize', this.resizeHandler);
+      }
+      
+      animate() {
+        if (!this.isActive) return;
+        requestAnimationFrame(() => this.animate());
+        
+        this.lat = Math.max(-85, Math.min(85, this.lat));
+        this.phi = THREE.MathUtils.degToRad(90 - this.lat);
+        this.theta = THREE.MathUtils.degToRad(this.lon);
+        
+        const x = 500 * Math.sin(this.phi) * Math.cos(this.theta);
+        const y = 500 * Math.cos(this.phi);
+        const z = 500 * Math.sin(this.phi) * Math.sin(this.theta);
+        
+        this.camera.lookAt(x, y, z);
+        this.renderer.render(this.scene, this.camera);
+      }
+      
+      onWindowResize() {
+        this.camera.aspect = this.container.clientWidth / this.container.clientHeight;
+        this.camera.updateProjectionMatrix();
+        this.renderer.setSize(this.container.clientWidth, this.container.clientHeight);
+      }
+      
+      dispose() {
+        this.deactivate();
+        this.videoTexture.dispose();
+        this.sphere.geometry.dispose();
+        this.sphere.material.dispose();
+        this.renderer.dispose();
+      }
+    }
 
     // ----------------- Utilities -----------------
     function showLoading(show=true){ loading.style.display = show ? 'block' : 'none' }
@@ -143,9 +332,33 @@
       return /\.m3u8($|\?)/i.test(url) || url.includes('.m3u8');
     }
     function canVideoPlay(url){
-      // basic check for mp4/webm
       return /\.(mp4|webm|ogg)(\?.*)?$/i.test(url);
     }
+
+    // ----------------- VR Toggle -----------------
+    function toggleVR() {
+      state.vrMode = !state.vrMode;
+      
+      if (state.vrMode) {
+        if (!vrScene) {
+          vrScene = new VRScene(playerRoot, videoPlayer);
+        }
+        vrScene.activate();
+        vrToggle.classList.add('active');
+        vrToggle.textContent = '✓ VR Activo';
+      } else {
+        if (vrScene) {
+          vrScene.deactivate();
+        }
+        vrToggle.classList.remove('active');
+        vrToggle.textContent = '🥽 Modo VR 360°';
+      }
+    }
+
+    vrToggle.addEventListener('click', toggleVR);
+    exitVRBtn.addEventListener('click', () => {
+      if (state.vrMode) toggleVR();
+    });
 
     // ----------------- Channel list rendering -----------------
     function saveStateToLocal(){
@@ -202,7 +415,6 @@
             hls.on(Hls.Events.MANIFEST_PARSED, () => res());
             hls.on(Hls.Events.ERROR, (event, data) => {
               console.warn('HLS error', data);
-              // continue normally, let player try fallback
             });
           };
           onMediaAttached();
@@ -216,14 +428,12 @@
     }
 
     function embedYouTube(url){
-      // clear any existing video element & hls
       if(hls){ hls.destroy(); hls = null; }
-      // remove existing node and create iframe
+      if(vrScene) vrScene.deactivate();
       playerRoot.innerHTML = '';
       const iframe = document.createElement('iframe');
       iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
       iframe.allowFullscreen = true;
-      // Normalize to embed URL
       try{
         const u = new URL(url);
         let videoId = null;
@@ -231,26 +441,22 @@
         if(u.hostname.includes('youtube.com')){
           const p = u.searchParams.get('v');
           if(p) videoId = p;
-          // playlist or embed links could be passed directly; accept /embed/...
           if(!videoId && u.pathname.startsWith('/embed/')) videoId = u.pathname.split('/embed/')[1];
         }
         if(videoId) iframe.src = `https://www.youtube-nocookie.com/embed/${videoId}?rel=0&autoplay=1`;
-        else {
-          // fallback: use URL inside an allowfullscreen iframe (YouTube short links, playlists, or full page)
-          iframe.src = url;
-        }
+        else iframe.src = url;
       }catch(e){
         iframe.src = url;
       }
       playerRoot.appendChild(iframe);
+      playerRoot.appendChild(vrOverlay);
     }
 
-    // Generic page embed for non-media links (e.g. canaltro channel pages)
     function embedGenericPage(url){
       if(hls){ hls.destroy(); hls = null; }
+      if(vrScene) vrScene.deactivate();
       playerRoot.innerHTML = '';
       const iframe = document.createElement('iframe');
-      // Allow common features; keep sandbox minimal so third-party pages can run media
       iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
       iframe.allowFullscreen = true;
       iframe.src = url;
@@ -258,12 +464,16 @@
       iframe.style.width = '100%';
       iframe.style.height = '100%';
       playerRoot.appendChild(iframe);
+      playerRoot.appendChild(vrOverlay);
     }
 
     async function playUrl(url){
       showLoading(true);
       currentChannelInfo.textContent = url;
-      // if url is youtube -> embed
+      
+      // Deactivate VR if active
+      if (state.vrMode) toggleVR();
+      
       if(isYouTube(url)){
         try{
           embedYouTube(url);
@@ -272,9 +482,10 @@
         }
         return;
       }
-      // else ensure we have a video element
+      
       playerRoot.innerHTML = '';
       playerRoot.appendChild(videoPlayer);
+      playerRoot.appendChild(vrOverlay);
       videoPlayer.pause();
       videoPlayer.removeAttribute('src');
       videoPlayer.load();
@@ -282,18 +493,16 @@
       try{
         if(isHls(url)){
           await attachHls(url);
-          // autoplay attempt:
           try{ await videoPlayer.play(); }catch(e){}
         } else if (canVideoPlay(url)){
           videoPlayer.src = url;
           try{ await videoPlayer.play(); }catch(e){}
         } else {
-          // If it's not a direct media file, try embedding the page (useful for channels hosted on webpages)
           embedGenericPage(url);
         }
       }catch(err){
         console.error('Error reproduciendo:', err);
-        alert('No se pudo reproducir la URL en este reproductor. Intenta otra o abre en navegador compatible.');
+        alert('No se pudo reproducir la URL en este reproductor.');
       } finally {
         showLoading(false);
       }
@@ -323,16 +532,13 @@
 
     // ----------------- M3U parsing -----------------
     async function parseM3U(text){
-      // Very simple M3U parser: looks for #EXTINF lines for title and next line for url
       const lines = text.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
       const out = [];
       for(let i=0;i<lines.length;i++){
         const line = lines[i];
         if(line.startsWith('#EXTINF')){
-          // try to extract title after comma
           const comma = line.indexOf(',');
           const title = comma >= 0 ? line.slice(comma+1).trim() : line;
-          // next non-comment non-empty line is URL
           let j = i+1;
           while(j < lines.length && lines[j].startsWith('#')) j++;
           if(j < lines.length){
@@ -340,7 +546,6 @@
             i = j;
           }
         } else if(!line.startsWith('#') && (line.startsWith('http') || line.startsWith('/'))){
-          // bare url lines without extinf
           out.push({title: line, url: line, favorite:false});
         }
       }
@@ -351,7 +556,6 @@
     loadChannelBtn.addEventListener('click', ()=>{
       const url = (channelUrl.value||'').trim();
       if(!url){ alert('Pega una URL válida'); return; }
-      // add to list
       state.channels.push({title: url, url, favorite:false});
       saveStateToLocal();
       renderList();
@@ -361,28 +565,28 @@
 
     loadListBtn.addEventListener('click', async ()=>{
       const file = m3uFile.files && m3uFile.files[0];
-      if(!file){ alert('Selecciona un archivo .m3u(o .m3u8)'); return; }
+      if(!file){ alert('Selecciona un archivo .m3u'); return; }
       const text = await file.text();
       const parsed = await parseM3U(text);
       if(parsed.length === 0){ alert('No se encontraron entradas en la lista M3U'); return; }
       state.channels = state.channels.concat(parsed);
       saveStateToLocal();
       renderList();
-      // auto play first of newly added
       playIndex(state.channels.length - parsed.length);
       m3uFile.value = '';
     });
 
     clearListBtn.addEventListener('click', ()=>{
-      if(!confirm('Deseas limpiar toda la lista de canales?')) return;
+      if(!confirm('¿Deseas limpiar toda la lista de canales?')) return;
       state.channels = [];
       state.currentIndex = -1;
+      if(state.vrMode) toggleVR();
       saveStateToLocal();
       renderList();
-      // stop playback
       if(hls){ hls.destroy(); hls = null; }
       playerRoot.innerHTML = '';
       playerRoot.appendChild(videoPlayer);
+      playerRoot.appendChild(vrOverlay);
       videoPlayer.pause();
       videoPlayer.removeAttribute('src');
       videoPlayer.load();
@@ -391,7 +595,6 @@
 
     searchInput.addEventListener('input', renderList);
     favoritesToggle.addEventListener('change', renderList);
-
     nextChannelBtn.addEventListener('click', playNext);
     prevChannelBtn.addEventListener('click', playPrev);
     favoriteCurrentBtn.addEventListener('click', ()=>{
@@ -402,17 +605,14 @@
       renderList();
     });
 
-    // keyboard shortcuts: left/right for channels
     window.addEventListener('keydown', (e)=>{
       if(e.key === 'ArrowRight') playNext();
       if(e.key === 'ArrowLeft') playPrev();
     });
 
-    // try to load saved channels on startup
     loadStateFromLocal();
     renderList();
 
-    // If there is a channel param in URL (?url=...), auto-load it
     (function autoLoadFromQuery(){
       try{
         const p = new URLSearchParams(location.search);
@@ -426,13 +626,12 @@
       }catch(e){}
     })();
 
-    // Basic service worker register (silent fail)
     if('serviceWorker' in navigator){
-      navigator.serviceWorker.register('/sw.js').catch(()=>{/* ignore */});
+      navigator.serviceWorker.register('/sw.js').catch(()=>{});
     }
 
-    // Ensure video element is present in playerRoot initially
     playerRoot.appendChild(videoPlayer);
+    playerRoot.appendChild(vrOverlay);
   </script>
 </body>
 </html>
