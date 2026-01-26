@@ -3,27 +3,25 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no" />
-  <title>Shinacon Perfect Sync</title>
+  <title>Shinacon VR Fixed</title>
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
 
   <style>
     body { margin: 0; background: #000; overflow: hidden; }
     
-    /* LA LÍNEA: Ahora es el límite físico de las dos pantallas */
-    .eje-central {
+    /* Línea divisoria física (Estática en la pantalla del móvil) */
+    .guia-fija {
       position: absolute; left: 50%; top: 0; bottom: 0;
-      width: 2px; background: white; z-index: 10000;
-      box-shadow: 0 0 15px rgba(0, 212, 255, 0.8);
-      display: none;
+      width: 2px; background: rgba(255, 255, 255, 0.7);
+      z-index: 10000; pointer-events: none; display: none;
     }
-    .vr-mode .eje-central { display: block; }
+    .vr-active .guia-fija { display: block; }
 
-    /* UI Inicial */
-    #setup {
+    #menu {
       position: absolute; inset: 0; z-index: 10001;
       background: #000; display: flex; align-items: center; justify-content: center;
     }
-    .box { background: #111; padding: 30px; border-radius: 15px; border: 1px solid #00d4ff; width: 300px; }
+    .card { background: #111; padding: 30px; border-radius: 15px; border: 1px solid #00d4ff; width: 300px; text-align: center; }
     input { width: 100%; padding: 12px; margin: 15px 0; border-radius: 8px; border: none; background: #222; color: white; }
     button { width: 100%; padding: 15px; background: #00d4ff; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
   </style>
@@ -32,68 +30,70 @@
     { "imports": { "hls.js": "https://esm.sh/hls.js@1.4.12" } }
   </script>
 </head>
-<body>
+<body class="vr-active">
 
-  <div id="setup">
-    <div class="box">
-      <h3 style="color:#00d4ff; margin:0; text-align:center;">AJUSTE SHINACON</h3>
-      <input id="url" type="text" placeholder="URL .m3u8 o mp4">
-      <button onclick="activarVR()">CALIBRAR Y REPRODUCIR</button>
+  <div class="guia-fija"></div>
+
+  <div id="menu">
+    <div class="card">
+      <h3 style="color:#00d4ff; margin:0;">CALIBRACIÓN SHINACON</h3>
+      <input id="url" type="text" placeholder="Link .m3u8 o mp4">
+      <button onclick="entrarAlCine()">INICIAR VR</button>
     </div>
   </div>
 
-  <div class="eje-central" id="linea"></div>
-
   <a-scene loading-screen="enabled: false" vr-mode-ui="enabled: false">
     <a-assets>
-      <video id="videoSource" autoplay crossorigin="anonymous" playsinline></video>
+      <video id="videoVr" autoplay crossorigin="anonymous" playsinline></video>
     </a-assets>
 
-    <a-entity id="escenario" position="0 0 0">
+    <a-entity id="cine-virtual" position="0 0 0">
       
-      <a-video src="#videoSource" width="4.5" height="2.5" 
-               position="-2.3 1.6 -4" rotation="0 5 0"></a-video>
+      <a-video src="#videoVr" width="4.4" height="2.5" 
+               position="-2.25 1.6 -4" rotation="0 0 0"></a-video>
 
-      <a-video src="#videoSource" width="4.5" height="2.5" 
-               position="2.3 1.6 -4" rotation="0 -5 0"></a-video>
+      <a-video src="#videoAsset" width="4.4" height="2.25" 
+               position="2.25 1.6 -4" rotation="0 0 0"></a-video>
       
+      <a-grid material="opacity: 0.1; color: #00d4ff"></a-grid>
     </a-entity>
 
-    <a-entity camera look-controls position="0 1.6 0">
+    <a-entity camera look-controls="pointerLockEnabled: true" position="0 1.6 0">
       <a-entity cursor="fuse: true; fuseTimeout: 1000"
                 position="0 0 -1"
-                geometry="primitive: ring; radiusInner: 0.008; radiusOuter: 0.012"
+                geometry="primitive: ring; radiusInner: 0.01; radiusOuter: 0.015"
                 material="color: #00d4ff; shader: flat">
       </a-entity>
     </a-entity>
 
-    <a-sky color="#020202"></a-sky>
+    <a-sky color="#050505"></a-sky>
   </a-scene>
 
   <script type="module">
     import Hls from "hls.js";
-    const v = document.getElementById('videoSource');
+    const video = document.getElementById('videoVr');
     const hls = new Hls();
 
-    window.activarVR = function() {
-      const link = document.getElementById('url').value.trim();
-      if(!link) return;
+    window.entrarAlCine = function() {
+      const url = document.getElementById('url').value.trim();
+      if(!url) return;
 
-      if (Hls.isSupported() && link.includes(".m3u8")) {
-        hls.loadSource(link);
-        hls.attachMedia(v);
-        hls.on(Hls.Events.MANIFEST_PARSED, () => v.play());
+      if (Hls.isSupported() && url.includes(".m3u8")) {
+        hls.loadSource(url);
+        hls.attachMedia(video);
+        hls.on(Hls.Events.MANIFEST_PARSED, () => video.play());
       } else {
-        v.src = link;
-        v.play();
+        video.src = url;
+        video.play();
       }
 
-      document.getElementById('setup').style.display = 'none';
-      document.body.classList.add('vr-mode');
+      document.getElementById('menu').style.display = 'none';
 
-      // Forzar rotación y pantalla completa
+      // Forzar pantalla completa
       const el = document.documentElement;
       if (el.requestFullscreen) el.requestFullscreen();
+      
+      // Bloquear orientación
       if (screen.orientation && screen.orientation.lock) {
         screen.orientation.lock('landscape').catch(()=>{});
       }
