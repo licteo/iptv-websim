@@ -3,31 +3,27 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no" />
-  <title>Cine VR Pro</title>
+  <title>VR Sincronizado Pro</title>
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
 
   <style>
-    body { margin: 0; overflow: hidden; background: #000; }
+    body { margin: 0; background: #000; overflow: hidden; }
+    #overlay {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.8); z-index: 1000; display: flex;
+      flex-direction: column; align-items: center; justify-content: center;
+    }
+    .controles { background: #1a1a1a; padding: 20px; border-radius: 15px; border: 1px solid #00d4ff; width: 80%; max-width: 300px; }
+    input { width: 100%; padding: 12px; margin: 10px 0; border-radius: 5px; border: none; box-sizing: border-box; }
+    button { width: 100%; padding: 15px; background: #00d4ff; border: none; border-radius: 5px; font-weight: bold; }
     
-    /* Panel de control inicial */
-    #ui {
-      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-      z-index: 1000; background: rgba(0,0,0,0.9); padding: 20px;
-      border-radius: 15px; border: 2px solid #00d4ff; text-align: center;
-      width: 280px; transition: 0.5s;
+    /* Línea de centrado estilo YouTube */
+    .divisor {
+      position: absolute; left: 50%; top: 0; bottom: 0; width: 2px;
+      background: rgba(255,255,255,0.6); z-index: 999; pointer-events: none;
+      display: none;
     }
-    .hidden { display: none !important; }
-
-    input { width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; border: none; }
-    button { width: 100%; padding: 15px; background: #00d4ff; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
-
-    /* Línea central de centrado (Igual a tu captura) */
-    .linea-centro {
-      position: absolute; left: 50%; top: 0; bottom: 0;
-      width: 2px; background: rgba(255,255,255,0.5); z-index: 999;
-      pointer-events: none; display: none;
-    }
-    .vr-mode .linea-centro { display: block; }
+    .vr-on .divisor { display: block; }
   </style>
 
   <script type="importmap">
@@ -36,47 +32,48 @@
 </head>
 <body>
 
-  <div id="ui">
-    <h2 style="color:#00d4ff; margin:0;">IPTV VR CINEMA</h2>
-    <input id="url" type="text" placeholder="Pega link .m3u8 o mp4">
-    <button onclick="iniciarCine()">INICIAR CINE VR</button>
+  <div id="overlay">
+    <div class="controles">
+      <h3 style="color:#00d4ff; margin-top:0; text-align:center;">IPTV VR FIX</h3>
+      <input id="url" type="text" placeholder="Pega link .m3u8 o mp4">
+      <button onclick="entrarVR()">REPRODUCIR EN RV</button>
+    </div>
   </div>
 
-  <div class="linea-centro" id="guia"></div>
+  <div class="divisor" id="linea"></div>
 
-  <a-scene id="escena" embedded loading-screen="enabled: false" device-orientation-permission-ui="enabled: true">
+  <a-scene id="escena" loading-screen="enabled: false" embedded="false">
     <a-assets>
-      <video id="video" autoplay crossorigin="anonymous" playsinline></video>
+      <video id="vid" autoplay crossorigin="anonymous" playsinline webkit-playsinline></video>
     </a-assets>
 
-    <a-entity id="pantallas-contenedor" position="0 1.6 -4">
-      <a-video src="#video" width="4" height="2.25" position="-2.1 0 0" rotation="0 10 0" 
-               geometry="primitive: plane; segmentsHeight: 20; segmentsWidth: 20;"></a-video>
-      
-      <a-video src="#video" width="4" height="2.25" position="2.1 0 0" rotation="0 -10 0"
-               geometry="primitive: plane; segmentsHeight: 20; segmentsWidth: 20;"></a-video>
+    <a-sky color="#111"></a-sky>
+    <a-grid material="opacity: 0.2; color: #00d4ff"></a-grid>
+
+    <a-entity id="mundo" position="0 0 0">
+        <a-video src="#vid" width="4" height="2.25" position="-2.2 1.6 -5" rotation="0 5 0"></a-video>
+        <a-video src="#vid" width="4" height="2.25" position="2.2 1.6 -5" rotation="0 -5 0"></a-video>
     </a-entity>
 
-    <a-entity camera look-controls position="0 1.6 0">
-      <a-entity cursor="fuse: true; fuseTimeout: 1500"
-                position="0 0 -1"
-                geometry="primitive: ring; radiusInner: 0.01; radiusOuter: 0.015"
-                material="color: #00d4ff; shader: flat">
-      </a-entity>
+    <a-entity camera look-controls="pointerLockEnabled: true" position="0 1.6 0">
+        <a-entity cursor="fuse: true; fuseTimeout: 1500"
+                  position="0 0 -1"
+                  geometry="primitive: ring; radiusInner: 0.01; radiusOuter: 0.015"
+                  material="color: #00d4ff; shader: flat">
+        </a-entity>
     </a-entity>
-
-    <a-sky color="#050505"></a-sky>
   </a-scene>
 
   <script type="module">
     import Hls from "hls.js";
-    const v = document.getElementById('video');
+    const v = document.getElementById('vid');
     const hls = new Hls();
 
-    window.iniciarCine = function() {
+    window.entrarVR = function() {
       const url = document.getElementById('url').value.trim();
       if(!url) return;
 
+      // Cargar Video
       if (Hls.isSupported() && url.includes(".m3u8")) {
         hls.loadSource(url);
         hls.attachMedia(v);
@@ -86,18 +83,22 @@
         v.play();
       }
 
-      // 1. Ocultar Menú y mostrar guía
-      document.getElementById('ui').classList.add('hidden');
-      document.getElementById('guia').style.display = 'block';
-      document.body.classList.add('vr-mode');
+      // Activar Interfaz
+      document.getElementById('overlay').style.display = 'none';
+      document.body.classList.add('vr-on');
 
-      // 2. Pantalla Completa Horizonal
-      const el = document.documentElement;
-      if (el.requestFullscreen) el.requestFullscreen();
-      
-      // 3. Forzar refresco de cámara para que detecte el giroscopio
-      const scene = document.querySelector('a-scene');
-      scene.play();
+      // Forzar Pantalla Completa
+      const doc = document.documentElement;
+      if (doc.requestFullscreen) doc.requestFullscreen();
+
+      // RE-ORIENTAR CÁMARA (Solución al problema de "todo oscuro")
+      // Esto fuerza a la escena a dibujarse y centrarse
+      setTimeout(() => {
+        const scene = document.querySelector('a-scene');
+        scene.resize();
+        // Forzamos a la cámara a mirar al frente (0, 1.6, 0)
+        document.querySelector('[camera]').setAttribute('rotation', '0 0 0');
+      }, 300);
     }
   </script>
 </body>
