@@ -3,140 +3,155 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover" />
-  <title>IPTV VR - Control Total</title>
+  <title>IPTV VR Fix - Controles Sincronizados</title>
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
   <style>
-    :root{--bg:#0f1720;--card:#141922;--muted:#9aa4af;--accent:#00d4ff;--danger:#ff4444}
-    *{box-sizing:border-box;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial}
-    html,body{height:100%;margin:0;background:#051019;color:#e6eef6;overflow:hidden}
-    .container{max-width:980px;margin:18px auto;padding:18px}
-    h1{margin:0 0 12px 0;font-size:20px;text-align:center;color:var(--accent)}
-    .input-section{display:flex;gap:8px;margin:8px 0;flex-wrap:wrap}
-    input[type="text"]{flex:1;padding:10px 12px;border-radius:8px;border:1px solid #22303a;background:#0b1115;color:#e6eef6}
-    button{background:var(--accent);color:#002;border:none;padding:10px 12px;border-radius:8px;cursor:pointer;font-weight:bold}
-    .btn-vr{background:#ff00ff;color:white;box-shadow:0 0 10px #ff00ff}
-    #btn-exit-vr { display:none; position:fixed; top:10px; left:10px; z-index:9999; background:var(--danger); color:white; padding:10px; border-radius:10px; border:none; }
-    body.is-vr #btn-exit-vr { display:block; }
-    body.is-vr .container { display:none; }
-    .channel-list{margin-top:10px;background:#071018;border-radius:10px;padding:8px;max-height:150px;overflow:auto;border:1px solid #16202a}
-    .channel-item{padding:10px;border-radius:8px;margin-bottom:6px;cursor:pointer;border:1px solid #222}
-    .player-shell{width:100%;height:300px;background:black;position:relative;margin-top:15px; border-radius:10px; overflow:hidden}
-    video{width:100%;height:100%;display:block}
-    #vr-layer { display:none; position:fixed; inset:0; z-index:10; background:#000; }
-    body.is-vr #vr-layer { display:block; }
-    /* Capa fantasma para que el toque del móvil y clic de mouse funcionen sobre el VR */
-    #touch-overlay { display:none; position:fixed; inset:0; z-index:100; opacity:0; }
-    body.is-vr #touch-overlay { display:block; }
-    .divisor-fijo { position:absolute; left:50%; top:0; bottom:0; width:2px; background:rgba(255,255,255,0.3); z-index:50; pointer-events:none; display:none; }
-    body.is-vr .divisor-fijo { display:block; }
+    :root{--accent:#00d4ff;--danger:#ff4444}
+    *{box-sizing:border-box;font-family:sans-serif}
+    body, html{margin:0;padding:0;width:100%;height:100%;background:#000;color:#fff;overflow:hidden}
+    .container{padding:20px;max-width:600px;margin:0 auto}
+    input, button{width:100%;padding:12px;margin:5px 0;border-radius:8px;border:none}
+    button{background:var(--accent);font-weight:bold;cursor:pointer}
+    .btn-vr{background:#ff00ff;color:#fff}
+    #btn-exit-vr{display:none;position:fixed;top:10px;left:10px;z-index:9999;background:var(--danger);width:auto}
+    body.is-vr #btn-exit-vr{display:block}
+    body.is-vr .container{display:none}
+    #vr-layer{display:none;position:fixed;inset:0}
+    body.is-vr #vr-layer{display:block}
+    .linea-guia{position:fixed;left:50%;top:0;bottom:0;width:2px;background:rgba(255,255,255,0.2);z-index:100;pointer-events:none;display:none}
+    body.is-vr .linea-guia{display:block}
+    video{display:none}
   </style>
-  <script type="importmap">{"imports":{"hls.js":"https://esm.sh/hls.js@1.4.12"}}</script>
 </head>
 <body>
 
   <button id="btn-exit-vr" onclick="toggleVR()">CERRAR VR</button>
-  <div id="touch-overlay"></div> <div id="vr-layer">
-    <div class="divisor-fijo"></div>
-    <a-scene embedded loading-screen="enabled: false" vr-mode-ui="enabled: false">
+  <div class="linea-guia"></div>
+
+  <div id="vr-layer">
+    <a-scene embedded vr-mode-ui="enabled: false" cursor="rayOrigin: mouse">
+      <a-assets>
+        <video id="videoPlayer" playsinline webkit-playsinline crossorigin="anonymous"></video>
+      </a-assets>
+
       <a-entity camera look-controls position="0 1.6 0">
-        <a-entity position="0 0 -3.5">
-          <a-video src="#videoPlayer" width="5.2" height="2.9" position="-2.65 0 0"></a-video>
-          <a-video src="#videoPlayer" width="5.2" height="2.9" position="2.65 0 0"></a-video>
-
-          <a-circle id="vr-prev" class="clickable" position="-1 -2 0.1" radius="0.2" color="#00d4ff">
-            <a-text value="ANT" align="center" position="0 0 0.05" scale="0.6 0.6 0.6"></a-text>
-          </a-circle>
-          <a-circle id="vr-next" class="clickable" position="1 -2 0.1" radius="0.2" color="#00d4ff">
-            <a-text value="SIG" align="center" position="0 0 0.05" scale="0.6 0.6 0.6"></a-text>
-          </a-circle>
-
-          <a-entity cursor="fuse: false; raycaster: .clickable" raycaster="objects: .clickable"
-                    position="0 0 1" geometry="primitive: ring; radiusInner: 0.01; radiusOuter: 0.02"
-                    material="color: white; shader: flat"></a-entity>
+        <a-entity cursor="fuse: false; raycaster: .clickable" 
+                  position="0 0 -1" 
+                  geometry="primitive: ring; radiusInner: 0.01; radiusOuter: 0.015" 
+                  material="color: white; shader: flat">
         </a-entity>
       </a-entity>
+
+      <a-video src="#videoPlayer" width="4" height="2.25" position="-2.1 1.6 -3"></a-video>
+      <a-video src="#videoPlayer" width="4" height="2.25" position="2.1 1.6 -3"></a-video>
+
+      <a-entity id="menu-vr" position="0 0.5 -2.8">
+        <a-circle id="vr-prev" class="clickable" position="-0.6 0 0" radius="0.2" color="#00d4ff">
+          <a-text value="ANT" align="center" position="0 0 0.01" width="3"></a-text>
+        </a-circle>
+        
+        <a-circle id="vr-next" class="clickable" position="0.6 0 0" radius="0.2" color="#00d4ff">
+          <a-text value="SIG" align="center" position="0 0 0.01" width="3"></a-text>
+        </a-circle>
+      </a-entity>
+
       <a-sky color="#000"></a-sky>
     </a-scene>
   </div>
 
   <div class="container">
-    <h1>IPTV VR Shinacon</h1>
-    <div class="input-section">
-      <input id="channelUrl" type="text" placeholder="URL .m3u8 o mp4..." />
-      <button id="loadSingle">Cargar</button>
-      <button onclick="toggleVR()" class="btn-vr">ENTRAR VR</button>
-    </div>
-    <div class="input-section">
-      <input id="m3uFile" type="file" accept=".m3u,.m3u8" />
-      <button id="loadM3U">Cargar Lista</button>
-    </div>
-    <div id="channelList" class="channel-list"></div>
-    <div class="player-shell">
-      <video id="videoPlayer" controls playsinline></video>
-    </div>
+    <h2>IPTV VR Player</h2>
+    <input id="m3uUrl" type="text" placeholder="Pega URL de lista M3U aquí">
+    <button onclick="cargarDesdeUrl()">Cargar Lista</button>
+    <input id="m3uFile" type="file" accept=".m3u">
+    <button onclick="cargarDesdeArchivo()" style="background:#444;color:#fff">Subir Archivo M3U</button>
+    <hr>
+    <button onclick="toggleVR()" class="btn-vr">ENTRAR MODO VR</button>
+    <div id="lista" style="margin-top:20px; max-height:200px; overflow-y:auto"></div>
   </div>
 
-  <script type="module">
-    import Hls from "hls.js";
-    const v = document.getElementById('videoPlayer');
-    const state = { channels: [], index: -1 };
-    let hls = null;
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  <script>
+    const video = document.getElementById('videoPlayer');
+    const state = { channels: [], index: 0 };
+    let hls = new Hls();
 
-    window.toggleVR = function() {
-      const isVr = document.body.classList.toggle('is-vr');
-      if (isVr) document.documentElement.requestFullscreen();
-      else document.exitFullscreen();
-    };
-
-    async function play(url) {
-      if(hls){ hls.destroy(); hls = null; }
-      if(url.includes('.m3u8')){
-        hls = new Hls(); hls.loadSource(url); hls.attachMedia(v);
-        hls.on(Hls.Events.MANIFEST_PARSED, () => v.play());
-      } else { v.src = url; v.play(); }
+    function toggleVR() {
+      document.body.classList.toggle('is-vr');
+      if (document.body.classList.contains('is-vr')) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      } else {
+        if(document.fullscreenElement) document.exitFullscreen();
+      }
     }
 
-    window.changeChannel = function(dir) {
-      if(state.channels.length === 0) return;
+    function playChannel(url) {
+      if (Hls.isSupported()) {
+        hls.destroy();
+        hls = new Hls();
+        hls.loadSource(url);
+        hls.attachMedia(video);
+        hls.on(Hls.Events.MANIFEST_PARSED, () => video.play());
+      } else {
+        video.src = url;
+        video.play();
+      }
+    }
+
+    function change(dir) {
+      if (state.channels.length === 0) return;
       state.index = (state.index + dir + state.channels.length) % state.channels.length;
-      play(state.channels[state.index].url);
-    };
+      playChannel(state.channels[state.index].url);
+      console.log("Cambiado a:", state.channels[state.index].name);
+    }
 
-    // --- ESCUCHA DE CLICS PARA VR (Compatible con PC y Móvil) ---
-    document.getElementById('vr-prev').addEventListener('click', () => changeChannel(-1));
-    document.getElementById('vr-next').addEventListener('click', () => changeChannel(1));
+    // Eventos para VR (Hacen clic en el objeto 3D)
+    document.getElementById('vr-prev').addEventListener('click', (e) => { e.stopPropagation(); change(-1); });
+    document.getElementById('vr-next').addEventListener('click', (e) => { e.stopPropagation(); change(1); });
 
-    // Lógica de carga de lista
-    document.getElementById('loadM3U').onclick = async () => {
-      const file = document.getElementById('m3uFile').files[0];
-      if(!file) return;
-      const text = await file.text();
+    // Carga de canales
+    function procesarM3U(text) {
       const lines = text.split('\n');
       state.channels = [];
-      lines.forEach((line, i) => {
-        if(line.startsWith('#EXTINF')) {
-          state.channels.push({ title: line.split(',')[1] || "Canal", url: lines[i+1].trim() });
+      for (let i = 0; i < lines.length; i++) {
+        if (lines[i].includes('#EXTINF')) {
+          const name = lines[i].split(',')[1] || "Canal sin nombre";
+          const url = lines[i+1]?.trim();
+          if (url && url.startsWith('http')) {
+            state.channels.push({ name, url });
+          }
         }
-      });
-      renderList();
-      if(state.channels.length > 0) { state.index = 0; play(state.channels[0].url); }
-    };
+      }
+      if (state.channels.length > 0) {
+        state.index = 0;
+        playChannel(state.channels[0].url);
+        renderLista();
+      }
+    }
 
-    document.getElementById('loadSingle').onclick = () => {
-      const url = document.getElementById('channelUrl').value;
-      if(url) { state.channels.push({title: "Manual", url}); state.index = state.channels.length-1; play(url); renderList(); }
-    };
+    async function cargarDesdeUrl() {
+      const url = document.getElementById('m3uUrl').value;
+      if (!url) return;
+      try {
+        const res = await fetch(url);
+        const text = await res.text();
+        procesarM3U(text);
+      } catch (e) { alert("Error cargando URL. Verifica CORS."); }
+    }
 
-    function renderList() {
-      const list = document.getElementById('channelList');
-      list.innerHTML = '';
-      state.channels.forEach((ch, idx) => {
-        const d = document.createElement('div');
-        d.className = 'channel-item';
-        d.innerText = ch.title;
-        d.onclick = () => { state.index = idx; play(ch.url); };
-        list.appendChild(d);
-      });
+    function cargarDesdeArchivo() {
+      const file = document.getElementById('m3uFile').files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (e) => procesarM3U(e.target.result);
+      reader.readAsText(file);
+    }
+
+    function renderLista() {
+      const div = document.getElementById('lista');
+      div.innerHTML = state.channels.map((c, i) => 
+        `<div onclick="state.index=${i}; playChannel('${c.url}')" style="padding:10px; border-bottom:1px solid #333; cursor:pointer">${c.name}</div>`
+      ).join('');
     }
   </script>
 </body>
