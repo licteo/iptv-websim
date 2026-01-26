@@ -3,20 +3,15 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover" />
-  <title>Shinacon VR Ultra Fullscreen</title>
+  <title>Shinacon VR Interactive</title>
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
 
   <style>
-    /* Eliminar cualquier margen o barra de scroll */
-    html, body { 
-      margin: 0; padding: 0; width: 100%; height: 100%; 
-      overflow: hidden; background: #000; 
-    }
+    html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; }
     
-    /* Línea divisoria de alta precisión */
     .divisor-fijo {
       position: absolute; left: 50%; top: 0; bottom: 0;
-      width: 1px; background: rgba(255, 255, 255, 0.5);
+      width: 1px; background: rgba(255, 255, 255, 0.4);
       z-index: 20000; pointer-events: none; display: none;
     }
     .vr-mode .divisor-fijo { display: block; }
@@ -25,10 +20,7 @@
       position: absolute; inset: 0; z-index: 20001;
       background: #000; display: flex; align-items: center; justify-content: center;
     }
-    .panel-ajuste { 
-      background: #111; padding: 30px; border-radius: 15px; 
-      border: 1px solid #00d4ff; width: 300px; text-align: center; 
-    }
+    .panel { background: #111; padding: 30px; border-radius: 15px; border: 1px solid #00d4ff; width: 300px; text-align: center; color: white; }
     input { width: 100%; padding: 12px; margin: 15px 0; border-radius: 5px; background: #222; color: #fff; border: none; }
     button { width: 100%; padding: 15px; background: #00d4ff; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; }
   </style>
@@ -42,28 +34,46 @@
   <div class="divisor-fijo"></div>
 
   <div id="ui-inicio">
-    <div class="panel-ajuste">
-      <h3 style="color:#00d4ff; margin:0; font-family: sans-serif;">PANTALLA COMPLETA VR</h3>
+    <div class="panel">
+      <h3 style="color:#00d4ff; margin:0;">CINE INTERACTIVO VR</h3>
       <input id="urlVideo" type="text" placeholder="URL .m3u8 o mp4">
-      <button onclick="activarTodo()">LANZAR MODO CINE</button>
+      <button onclick="activarCine()">ENTRAR AL CINE</button>
     </div>
   </div>
 
-  <a-scene loading-screen="enabled: false" vr-mode-ui="enabled: false" embedded="false">
+  <a-scene loading-screen="enabled: false" vr-mode-ui="enabled: false">
     <a-assets>
-      <video id="meuVideo" autoplay crossorigin="anonymous" playsinline webkit-playsinline></video>
+      <video id="videoVr" autoplay crossorigin="anonymous" playsinline></video>
+      <img id="playImg" src="https://img.icons8.com/ios-filled/100/ffffff/play.png">
+      <img id="pauseImg" src="https://img.icons8.com/ios-filled/100/ffffff/pause.png">
     </a-assets>
 
     <a-entity camera look-controls position="0 1.6 0">
-      <a-entity position="0 0 -4">
-        <a-video src="#meuVideo" width="4.3" height="2.4" position="-2.16 0 0"></a-video>
-        <a-video src="#meuVideo" width="4.3" height="2.4" position="2.16 0 0"></a-video>
+      
+      <a-entity id="hud-vr" position="0 0 -4">
         
-        <a-entity cursor="fuse: true; fuseTimeout: 1000"
+        <a-video src="#videoVr" width="4.3" height="2.4" position="-2.16 0 0"></a-video>
+        <a-video src="#videoVr" width="4.3" height="2.4" position="2.16 0 0"></a-video>
+
+        <a-circle id="btn-izq" position="-2.16 -1.6 0" radius="0.2" color="#00d4ff" 
+                  class="interactuable" onclick="toggleVideo()">
+            <a-image src="#pauseImg" width="0.2" height="0.2"></a-image>
+        </a-circle>
+
+        <a-circle id="btn-der" position="2.16 -1.6 0" radius="0.2" color="#00d4ff" 
+                  class="interactuable" onclick="toggleVideo()">
+            <a-image src="#pauseImg" width="0.2" height="0.2"></a-image>
+        </a-circle>
+
+        <a-entity cursor="fuse: true; fuseTimeout: 1200"
+                  raycaster="objects: .interactuable"
                   position="0 0 1"
-                  geometry="primitive: ring; radiusInner: 0.01; radiusOuter: 0.015"
-                  material="color: #00d4ff; shader: flat">
+                  geometry="primitive: ring; radiusInner: 0.01; radiusOuter: 0.018"
+                  material="color: #ff0000; shader: flat">
+            <a-animation begin="fusing" easing="ease-in" attribute="scale" fill="forwards" from="1 1 1" to="0.1 0.1 0.1" dur="1200"></a-animation>
+            <a-animation begin="mouseleave" easing="ease-in" attribute="scale" fill="backwards" from="0.1 0.1 0.1" to="1 1 1" dur="100"></a-animation>
         </a-entity>
+
       </a-entity>
     </a-entity>
 
@@ -72,48 +82,50 @@
 
   <script type="module">
     import Hls from "hls.js";
-    const v = document.getElementById('meuVideo');
+    const video = document.getElementById('videoVr');
     const hls = new Hls();
 
-    window.activarTodo = function() {
+    window.activarCine = function() {
       const link = document.getElementById('urlVideo').value.trim();
       if(!link) return;
 
       if (Hls.isSupported() && link.includes(".m3u8")) {
         hls.loadSource(link);
-        hls.attachMedia(v);
-        hls.on(Hls.Events.MANIFEST_PARSED, () => v.play());
+        hls.attachMedia(video);
+        hls.on(Hls.Events.MANIFEST_PARSED, () => video.play());
       } else {
-        v.src = link;
-        v.play();
+        video.src = link;
+        video.play();
       }
 
       document.getElementById('ui-inicio').style.display = 'none';
-      requestFullscreen();
-    }
-
-    // Función para forzar la pantalla completa real
-    function requestFullscreen() {
-      const el = document.documentElement;
-      const rfs = el.requestFullscreen || el.webkitRequestFullScreen || el.mozRequestFullScreen || el.msRequestFullscreen;
       
-      if (rfs) {
-        rfs.call(el).then(() => {
-          // Bloquear orientación a horizontal una vez en Fullscreen
-          if (screen.orientation && screen.orientation.lock) {
-            screen.orientation.lock('landscape').catch(() => {
-              console.log("El bloqueo de orientación requiere interacción o no es compatible.");
-            });
-          }
-        });
-      }
+      // Forzar Fullscreen real
+      const doc = document.documentElement;
+      if (doc.requestFullscreen) doc.requestFullscreen();
     }
 
-    // Si el usuario toca la pantalla durante el video, forzar fullscreen de nuevo
-    // (Útil para ocultar barras de navegación rebeldes en Android)
+    // Función para Play/Pause desde VR
+    window.toggleVideo = function() {
+      if (video.paused) {
+        video.play();
+        actualizarIconos("#pauseImg");
+      } else {
+        video.pause();
+        actualizarIconos("#playImg");
+      }
+    };
+
+    function actualizarIconos(imgId) {
+        document.querySelectorAll('a-image').forEach(img => {
+            img.setAttribute('src', imgId);
+        });
+    }
+
+    // Re-intentar Fullscreen si se sale por error
     document.body.addEventListener('click', () => {
-      if (!document.fullscreenElement) {
-        requestFullscreen();
+      if (!document.fullscreenElement && document.getElementById('ui-inicio').style.display === 'none') {
+        document.documentElement.requestFullscreen();
       }
     });
   </script>
