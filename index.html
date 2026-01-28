@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover" />
-  <title>IPTV VR Ultimate</title>
+  <title>IPTV VR Ultimate Control</title>
 
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
 
@@ -35,8 +35,7 @@
 
     #vr-web-msg { display:none; position:fixed; top:50%; width:100%; text-align:center; color:yellow; font-weight:bold; z-index:10001; text-shadow:2px 2px #000 }
     
-    /* Instrucciones VR mejoradas */
-    #vr-controls-hint { position:fixed; bottom:20px; width:100%; text-align:center; color:rgba(255,255,255,0.6); font-size:14px; z-index:10002; pointer-events:none; display:none }
+    #vr-controls-hint { position:fixed; bottom:20px; width:100%; text-align:center; color:rgba(255,255,255,0.5); font-size:12px; z-index:10002; pointer-events:none; display:none }
     body.is-vr #vr-controls-hint { display:block }
 
     .video-container{background:#000; border-radius:12px; position:relative; overflow:hidden; width:100%; height:320px; border:1px solid #22303a}
@@ -49,7 +48,7 @@
     .left-zone { left:0 }
     .right-zone { right:0 }
     
-    #feedback{ position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:rgba(0,0,0,0.85); color:#fff; padding:15px 25px; border-radius:30px; display:none; z-index:10005; pointer-events:none; border:1px solid var(--accent); white-space:nowrap }
+    #feedback{ position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:rgba(0,0,0,0.9); color:#fff; padding:15px 25px; border-radius:30px; display:none; z-index:10005; pointer-events:none; border:1px solid var(--accent); white-space:nowrap; font-size: 18px; font-weight: bold; }
 
     @media (max-width:640px){ .video-container{height:230px} }
   </style>
@@ -61,7 +60,7 @@
   <div id="vr-layer">
     <button id="btn-exit-vr" onclick="window.toggleVR()">SALIR DE VR</button>
     <div id="vr-web-msg">Web no compatible con VR. Usa enlaces directos.</div>
-    <div id="vr-controls-hint">Usa ⬆/⬇ para juntar/separar ojos | Click para cambiar canal</div>
+    <div id="vr-controls-hint">Toque ARRIBA: Separar | ABAJO: Juntar | CENTRO: Cambiar Canal</div>
 
     <a-scene embedded loading-screen="enabled:false" vr-mode-ui="enabled:false">
       <a-entity camera look-controls position="0 1.6 0">
@@ -106,7 +105,6 @@
   <script type="module">
     import Hls from "hls.js";
 
-    // Configuraciones guardadas (canales y calibración de ojos)
     const saved = JSON.parse(localStorage.getItem('iptv_data_v2')) || { channels: [], last: -1, eyeGap: 2.15 };
     const state = { channels: saved.channels, current: saved.last, eyeGap: saved.eyeGap };
     
@@ -116,28 +114,26 @@
     const vrMsg = document.getElementById('vr-web-msg');
     let hls = null;
 
-    // --- FUNCIONES DE CALIBRACIÓN VISUAL ---
-    
     function updateEyeGap() {
         const left = document.getElementById('screenLeft');
         const right = document.getElementById('screenRight');
         if(left && right) {
             left.object3D.position.x = -state.eyeGap;
             right.object3D.position.x = state.eyeGap;
-            showFeedback(`Separación: ${state.eyeGap.toFixed(2)}`);
+            // Solo mostrar feedback si estamos en VR
+            if(document.body.classList.contains('is-vr')){
+                showFeedback(`Separación: ${state.eyeGap.toFixed(2)}`);
+            }
             window.save();
         }
     }
 
     function adjustEyes(delta) {
         state.eyeGap += delta;
-        // Límites de seguridad para no marearse
         if(state.eyeGap < 1.0) state.eyeGap = 1.0;
         if(state.eyeGap > 3.5) state.eyeGap = 3.5;
         updateEyeGap();
     }
-
-    // ----------------------------------------
 
     function refreshVR() {
       if (video.style.display !== "none" && video.paused && video.src) {
@@ -148,7 +144,6 @@
         const mesh = s.getObject3D('mesh');
         if(mesh && mesh.material.map) mesh.material.map.needsUpdate = true;
       });
-      // Asegurar que la calibración se aplique al entrar
       updateEyeGap();
     }
 
@@ -214,14 +209,14 @@
     window.playNext = () => {
       if(state.channels.length === 0) return;
       let next = (state.current + 1) % state.channels.length;
-      showFeedback("CANAL SIGUIENTE ▶");
+      showFeedback("SIGUIENTE ▶");
       window.playUrl(state.channels[next].url, next);
     };
 
     window.playPrev = () => {
       if(state.channels.length === 0) return;
       let prev = (state.current - 1 + state.channels.length) % state.channels.length;
-      showFeedback("◀ CANAL ANTERIOR");
+      showFeedback("◀ ANTERIOR");
       window.playUrl(state.channels[prev].url, prev);
     };
 
@@ -249,7 +244,7 @@
     };
 
     window.clearAll = () => {
-      if(confirm("¿Borrar canales?")) {
+      if(confirm("¿Borrar todo?")) {
         state.channels = []; state.current = -1;
         window.save(); render();
         video.src = ""; iframe.src = "";
@@ -281,48 +276,64 @@
         window.playUrl(state.channels[state.current].url, state.current);
     }
 
-    // --- CONTROL HÍBRIDO (Mando, Teclado, Touch) ---
-    const handleInteraction = (e) => {
-      if (document.body.classList.contains('is-vr')) {
-        if (e.target && e.target.id === 'btn-exit-vr') return;
-        
-        // Evitamos que cambie de canal si estamos ajustando los ojos con teclas
-        if(e.type === 'keydown' && (e.code === 'ArrowUp' || e.code === 'ArrowDown')) return;
-
-        console.log("Cambio de canal por interacción");
-        window.playNext();
-        setTimeout(refreshVR, 600);
-      }
-    };
+    // --- NUEVA LÓGICA DE CONTROL TÁCTIL Y MANDO ---
 
     window.addEventListener('touchstart', (e) => {
-        if (e.target.id !== 'btn-exit-vr') handleInteraction(e);
+      if (!document.body.classList.contains('is-vr')) return; // Modo normal: comportamiento estándar
+      if (e.target.id === 'btn-exit-vr') return;
+
+      const touchY = e.touches[0].clientY;
+      const screenHeight = window.innerHeight;
+
+      // Zonas invisibles:
+      // 0% - 25%: ARRIBA (Separar Ojos)
+      // 25% - 75%: CENTRO (Cambiar Canal)
+      // 75% - 100%: ABAJO (Juntar Ojos)
+
+      if (touchY < screenHeight * 0.25) {
+          adjustEyes(0.1); // Toque arriba -> Separa
+      } else if (touchY > screenHeight * 0.75) {
+          adjustEyes(-0.1); // Toque abajo -> Junta
+      } else {
+          // Toque al centro -> Cambio canal
+          window.playNext();
+          setTimeout(refreshVR, 600);
+      }
     });
 
-    window.addEventListener('click', (e) => {
-        if (e.target.id !== 'btn-exit-vr') handleInteraction(e);
-    });
-
+    // Control de Teclado / Mando Bluetooth
     window.addEventListener('keydown', (e) => {
-      // 1. AJUSTE DE OJOS (Flechas Arriba/Abajo) - Mando en modo Key/Game
-      if (document.body.classList.contains('is-vr')) {
-          if (e.code === 'ArrowUp' || e.code === 'PageUp') {
-              // Separar pantallas (si ves doble hacia adentro)
-              adjustEyes(0.05);
-              return;
-          }
-          if (e.code === 'ArrowDown' || e.code === 'PageDown') {
-              // Juntar pantallas (si ves doble hacia afuera)
-              adjustEyes(-0.05);
-              return;
-          }
-      }
+      if (!document.body.classList.contains('is-vr')) return;
 
-      // 2. CAMBIO DE CANAL (Enter, Espacio)
-      if (e.code === 'Enter' || e.code === 'Space' || e.keyCode === 13) {
-        handleInteraction(e);
+      const k = e.code;
+      // Algunos mandos usan KeyW/KeyS para el joystick
+      const isUp = k === 'ArrowUp' || k === 'PageUp' || k === 'KeyW';
+      const isDown = k === 'ArrowDown' || k === 'PageDown' || k === 'KeyS';
+      const isAction = k === 'Enter' || k === 'Space' || k === 'NumpadEnter';
+
+      if (isUp) {
+          e.preventDefault(); // Evita scroll
+          adjustEyes(0.05);
+      } 
+      else if (isDown) {
+          e.preventDefault();
+          adjustEyes(-0.05);
+      }
+      else if (isAction) {
+          window.playNext();
+          setTimeout(refreshVR, 600);
       }
     });
+    
+    // Mando en modo Mouse (Clicks)
+    window.addEventListener('click', (e) => {
+       if(document.body.classList.contains('is-vr') && e.target.id !== 'btn-exit-vr') {
+           // En modo mouse, normalmente el click es solo para acción
+           window.playNext();
+           setTimeout(refreshVR, 600);
+       }
+    });
+
   </script>
 </body>
 </html>
