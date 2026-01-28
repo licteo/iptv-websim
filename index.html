@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover" />
-  <title>IPTV VR Ultimate Pro</title>
+  <title>IPTV VR Permanente</title>
 
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
 
@@ -29,39 +29,19 @@
     .channel-item:hover{background:#111b25}
     .channel-item.active{border-left:4px solid var(--accent); background:#111b25}
 
-    /* CAPA VR */
     #vr-layer { display:none; position:fixed; inset:0; z-index:9999; background:#000 }
     body.is-vr #vr-layer { display:block }
-    
     #btn-exit-vr { position:fixed; top:15px; right:15px; z-index:10000; background:var(--danger); color:white; padding:10px 20px; border-radius:20px; font-weight:bold; border:2px solid white }
 
-    /* LÍNEA GUÍA CENTRAL PARA ALINEAR GAFAS */
-    #center-guide {
-        position: fixed;
-        top: 0; bottom: 0; left: 50%;
-        width: 2px;
-        background: rgba(255, 255, 255, 0.4); /* Blanco semi-transparente */
-        transform: translateX(-50%);
-        z-index: 9998;
-        pointer-events: none; /* Permite clics a través de ella */
-    }
+    #center-guide { position:fixed; top:0; bottom:0; left:50%; width:2px; background:rgba(255,255,255,0.3); transform:translateX(-50%); z-index:9998; pointer-events:none }
 
-    #vr-web-msg { display:none; position:fixed; top:50%; width:100%; text-align:center; color:yellow; font-weight:bold; z-index:10001; text-shadow:2px 2px #000 }
-    
-    #vr-controls-hint { position:fixed; bottom:20px; width:100%; text-align:center; color:rgba(255,255,255,0.5); font-size:12px; z-index:10002; pointer-events:none; display:none }
-    body.is-vr #vr-controls-hint { display:block }
+    #feedback{ position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:rgba(0,0,0,0.9); color:#fff; padding:15px 25px; border-radius:30px; display:none; z-index:10005; pointer-events:none; border:1px solid var(--accent); font-weight:bold }
 
     .video-container{background:#000; border-radius:12px; position:relative; overflow:hidden; width:100%; height:320px; border:1px solid #22303a}
     #fullPlayerArea { width:100%; height:100%; position:relative; background:#000; display:flex; align-items:center }
     
     #videoPlayer, #webFrame { width:100%; height:100%; border:none; display:none }
     video { object-fit:contain }
-
-    .touch-zone { position:absolute; top:0; bottom:80px; width:35%; z-index:5 }
-    .left-zone { left:0 }
-    .right-zone { right:0 }
-    
-    #feedback{ position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:rgba(0,0,0,0.9); color:#fff; padding:15px 25px; border-radius:30px; display:none; z-index:10005; pointer-events:none; border:1px solid var(--accent); white-space:nowrap; font-size: 18px; font-weight: bold; }
 
     @media (max-width:640px){ .video-container{height:230px} }
   </style>
@@ -71,36 +51,32 @@
 <body>
 
   <div id="vr-layer">
-    <button id="btn-exit-vr" onclick="window.toggleVR()">SALIR DE VR</button>
+    <button id="btn-exit-vr" onclick="window.toggleVR()">SALIR</button>
     <div id="center-guide"></div>
     
-    <div id="vr-web-msg">Web no compatible con VR. Usa enlaces directos.</div>
-    <div id="vr-controls-hint">Toque ARRIBA: Separar | ABAJO: Juntar | CENTRO: Cambiar Canal</div>
-
     <a-scene embedded loading-screen="enabled:false" vr-mode-ui="enabled:false">
-      <a-entity camera look-controls position="0 1.6 0">
-        <a-entity position="0 0 -3.6">
-          <a-video id="screenLeft" src="#videoPlayer" width="4.8" height="2.7" position="-2.15 0 0" material="shader:flat"></a-video>
-          <a-video id="screenRight" src="#videoPlayer" width="4.8" height="2.7" position="2.15 0 0" material="shader:flat"></a-video>
-          <a-plane position="0 0 0.5" width="0.4" height="4" color="#000" material="shader:flat"></a-plane>
-        </a-entity>
+      <a-entity camera look-controls position="0 1.6 0"></a-entity>
+      <a-entity id="vr-container" position="0 1.6 -3.5">
+          <a-video id="screenLeft" src="#videoPlayer" width="4.8" height="2.7" material="shader:flat"></a-video>
+          <a-video id="screenRight" src="#videoPlayer" width="4.8" height="2.7" material="shader:flat"></a-video>
+          <a-plane position="0 0 0.1" width="0.2" height="5" color="#000" material="shader:flat"></a-plane>
       </a-entity>
       <a-sky color="#000"></a-sky>
     </a-scene>
   </div>
 
   <div class="container">
-    <h1 style="text-align:center; color:var(--accent); margin:0 0 10px 0; font-size:22px">IPTV VR Player</h1>
+    <h1 style="text-align:center; color:var(--accent); margin:0 0 10px 0; font-size:22px">IPTV VR Premium</h1>
     
     <div class="input-section">
-      <input id="urlIn" type="text" placeholder="Pega URL (.m3u8, .mp4 o Web)" />
-      <button onclick="window.addUrl()" class="btn-load">AGREGAR</button>
+      <input id="urlIn" type="text" placeholder="URL Canal (.m3u8, .mp4, Web)" />
+      <button onclick="window.addUrl()" class="btn-load">AÑADIR</button>
     </div>
 
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px">
-        <button onclick="window.toggleFS()" class="btn-fs">PANTALLA COMPLETA</button>
+    <div style="display:flex; justify-content:space-between; margin-bottom:8px">
+        <button onclick="window.toggleFS()" class="btn-fs">FULL SCREEN</button>
         <button onclick="window.toggleVR()" class="btn-vr">MODO VR</button>
-        <button onclick="window.clearAll()" class="btn-clear">Limpiar Lista</button>
+        <button onclick="window.clearAll()" class="btn-clear">Limpiar</button>
     </div>
 
     <div class="channel-list" id="list"></div>
@@ -108,11 +84,8 @@
     <div class="video-container">
       <div id="fullPlayerArea">
         <div id="feedback"></div>
-        <div class="touch-zone left-zone" onclick="window.playPrev()"></div>
-        <div class="touch-zone right-zone" onclick="window.playNext()"></div>
-        
         <video id="videoPlayer" crossorigin="anonymous" playsinline webkit-playsinline controls></video>
-        <iframe id="webFrame" allow="autoplay; fullscreen; encrypted-media"></iframe>
+        <iframe id="webFrame" allow="autoplay; fullscreen"></iframe>
       </div>
     </div>
   </div>
@@ -120,219 +93,143 @@
   <script type="module">
     import Hls from "hls.js";
 
-    const saved = JSON.parse(localStorage.getItem('iptv_data_v2')) || { channels: [], last: -1, eyeGap: 2.15 };
-    const state = { channels: saved.channels, current: saved.last, eyeGap: saved.eyeGap };
+    // CLAVE DE MEMORIA: iptv_v3
+    const CONFIG_KEY = 'iptv_config_v3';
+    let config = JSON.parse(localStorage.getItem(CONFIG_KEY)) || { 
+        channels: [], 
+        lastIndex: -1, 
+        eyeGap: 2.15 
+    };
     
     const video = document.getElementById('videoPlayer');
     const iframe = document.getElementById('webFrame');
     const feedback = document.getElementById('feedback');
-    const vrMsg = document.getElementById('vr-web-msg');
     let hls = null;
 
-    function updateEyeGap() {
+    // APLICAR CONFIGURACIÓN GUARDADA AL INICIO
+    function applyConfig() {
         const left = document.getElementById('screenLeft');
         const right = document.getElementById('screenRight');
         if(left && right) {
-            left.object3D.position.x = -state.eyeGap;
-            right.object3D.position.x = state.eyeGap;
-            if(document.body.classList.contains('is-vr')){
-                showFeedback(`Separación: ${state.eyeGap.toFixed(2)}`);
-            }
-            window.save();
+            left.setAttribute('position', `-${config.eyeGap} 0 0`);
+            right.setAttribute('position', `${config.eyeGap} 0 0`);
         }
+        localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
     }
 
-    function adjustEyes(delta) {
-        state.eyeGap += delta;
-        if(state.eyeGap < 1.0) state.eyeGap = 1.0;
-        if(state.eyeGap > 3.5) state.eyeGap = 3.5;
-        updateEyeGap();
-    }
+    window.saveChannels = () => {
+        localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
+    };
 
-    function refreshVR() {
-      if (video.style.display !== "none" && video.paused && video.src) {
-        video.play().catch(() => {});
-      }
-      const vrScreens = document.querySelectorAll('a-video');
-      vrScreens.forEach(s => {
-        const mesh = s.getObject3D('mesh');
-        if(mesh && mesh.material.map) mesh.material.map.needsUpdate = true;
-      });
-      updateEyeGap();
-    }
-
-    window.save = () => {
-        localStorage.setItem('iptv_data_v2', JSON.stringify({
-            channels: state.channels,
-            last: state.current,
-            eyeGap: state.eyeGap
-        }));
+    window.adjustEyes = (delta) => {
+        config.eyeGap = Math.max(1.0, Math.min(3.5, config.eyeGap + delta));
+        applyConfig();
+        showFeedback(`Ajuste: ${config.eyeGap.toFixed(2)}`);
     };
 
     window.playUrl = async (url, index) => {
-      state.current = index;
-      window.save();
+      config.lastIndex = index;
+      window.saveChannels();
       render();
 
-      if(hls){ hls.destroy(); hls = null; }
+      if(hls) { hls.destroy(); hls = null; }
       
       const isM3U8 = url.toLowerCase().includes('.m3u8');
-      const isVideoFile = url.match(/\.(mp4|webm|avi|mov)$/i);
+      const isVideo = url.match(/\.(mp4|webm|avi|mov)$/i);
 
-      if (isM3U8 || isVideoFile) {
-        iframe.style.display = "none";
-        iframe.src = "";
+      if (isM3U8 || isVideo) {
+        iframe.style.display = "none"; iframe.src = "";
         video.style.display = "block";
-        vrMsg.style.display = "none";
-
         if (Hls.isSupported() && isM3U8) {
-          hls = new Hls();
-          hls.loadSource(url);
-          hls.attachMedia(video);
-          hls.on(Hls.Events.MANIFEST_PARSED, () => {
-            video.play().catch(()=>{});
-            setTimeout(refreshVR, 500);
-          });
+          hls = new Hls(); hls.loadSource(url); hls.attachMedia(video);
+          hls.on(Hls.Events.MANIFEST_PARSED, () => video.play().catch(()=>{}));
         } else { 
-          video.src = url; 
-          video.load();
-          video.play().catch(()=>{}); 
-          setTimeout(refreshVR, 500);
+          video.src = url; video.load(); video.play().catch(()=>{}); 
         }
       } else {
-        video.style.display = "none";
-        video.pause();
-        video.src = "";
-        iframe.style.display = "block";
-        iframe.src = url;
-        if(document.body.classList.contains('is-vr')) vrMsg.style.display = "block";
+        video.style.display = "none"; video.pause();
+        iframe.style.display = "block"; iframe.src = url;
       }
     };
 
     window.addUrl = () => {
       const input = document.getElementById('urlIn');
       if(input.value.trim()){
-        state.channels.push({title: "Canal " + (state.channels.length + 1), url: input.value.trim()});
+        config.channels.push({title: "Canal " + (config.channels.length + 1), url: input.value.trim()});
         input.value = "";
-        window.save();
+        window.saveChannels();
         render();
-        window.playUrl(state.channels[state.channels.length-1].url, state.channels.length-1);
+        window.playUrl(config.channels[config.channels.length-1].url, config.channels.length-1);
       }
     };
 
     window.playNext = () => {
-      if(state.channels.length === 0) return;
-      let next = (state.current + 1) % state.channels.length;
-      showFeedback("SIGUIENTE ▶");
-      window.playUrl(state.channels[next].url, next);
+      if(config.channels.length === 0) return;
+      let next = (config.lastIndex + 1) % config.channels.length;
+      showFeedback("SIGUIENTE");
+      window.playUrl(config.channels[next].url, next);
     };
 
-    window.playPrev = () => {
-      if(state.channels.length === 0) return;
-      let prev = (state.current - 1 + state.channels.length) % state.channels.length;
-      showFeedback("◀ ANTERIOR");
-      window.playUrl(state.channels[prev].url, prev);
-    };
-
-    window.toggleFS = async () => {
-      const area = document.getElementById('fullPlayerArea');
-      if (!document.fullscreenElement) {
-        if (area.requestFullscreen) await area.requestFullscreen();
-        screen.orientation?.lock('landscape').catch(()=>{});
-      } else {
-        document.exitFullscreen();
-      }
-    };
-
-    window.toggleVR = async () => {
-      const isEntering = !document.body.classList.contains('is-vr');
+    window.toggleVR = () => {
       document.body.classList.toggle('is-vr');
-      if (isEntering) {
-        document.documentElement.requestFullscreen?.();
-        if(iframe.style.display === "block") vrMsg.style.display = "block";
-        setTimeout(refreshVR, 800);
-      } else {
-        vrMsg.style.display = "none";
-        document.exitFullscreen?.();
+      if(document.body.classList.contains('is-vr')) {
+          document.documentElement.requestFullscreen?.().catch(()=>{});
+          setTimeout(applyConfig, 100);
       }
+    };
+
+    window.toggleFS = () => {
+      const area = document.getElementById('fullPlayerArea');
+      if (!document.fullscreenElement) area.requestFullscreen?.();
+      else document.exitFullscreen?.();
     };
 
     window.clearAll = () => {
       if(confirm("¿Borrar todo?")) {
-        state.channels = []; state.current = -1;
-        window.save(); render();
+        config.channels = []; config.lastIndex = -1;
+        window.saveChannels(); render();
         video.src = ""; iframe.src = "";
       }
     };
 
     function showFeedback(txt) {
-      feedback.textContent = txt;
-      feedback.style.display = "block";
-      setTimeout(() => feedback.style.display = "none", 1500);
+      feedback.textContent = txt; feedback.style.display = "block";
+      setTimeout(() => feedback.style.display = "none", 1000);
     }
 
     function render() {
       const listDiv = document.getElementById('list');
-      if(state.channels.length === 0) {
-        listDiv.innerHTML = '<div style="padding:20px; text-align:center; color:#444">Lista vacía.</div>';
+      if(config.channels.length === 0) {
+        listDiv.innerHTML = '<div style="padding:20px; text-align:center; color:#444">Sin canales</div>';
         return;
       }
-      listDiv.innerHTML = state.channels.map((ch, i) => 
-        `<div class="channel-item ${state.current === i ? 'active' : ''}" onclick="window.playUrl('${ch.url}', ${i})">
-            <span>${ch.title}</span>
-            <span style="color:var(--accent); font-size:10px">PLAY</span>
+      listDiv.innerHTML = config.channels.map((ch, i) => 
+        `<div class="channel-item ${config.lastIndex === i ? 'active' : ''}" onclick="window.playUrl('${ch.url}', ${i})">
+            <span>${ch.title}</span><span style="color:var(--accent)">PLAY</span>
          </div>`
       ).join('');
     }
 
+    // Inicialización
     render();
-    if(state.current >= 0 && state.channels[state.current]) {
-        window.playUrl(state.channels[state.current].url, state.current);
-    }
+    applyConfig();
+    if(config.lastIndex >= 0) window.playUrl(config.channels[config.lastIndex].url, config.lastIndex);
 
-    // --- CONTROLES ZONALES Y BLUETOOTH ---
+    // Controles de mando y táctil
+    window.addEventListener('keydown', (e) => {
+        if(!document.body.classList.contains('is-vr')) return;
+        if(e.code === 'ArrowUp' || e.code === 'KeyW') window.adjustEyes(0.05);
+        if(e.code === 'ArrowDown' || e.code === 'KeyS') window.adjustEyes(-0.05);
+        if(e.code === 'Enter' || e.code === 'Space') window.playNext();
+    });
 
     window.addEventListener('touchstart', (e) => {
-      if (!document.body.classList.contains('is-vr')) return; 
-      if (e.target.id === 'btn-exit-vr') return;
-
-      const touchY = e.touches[0].clientY;
-      const screenHeight = window.innerHeight;
-
-      // ARRIBA (25%) -> Separar
-      // ABAJO (25%) -> Juntar
-      // CENTRO (50%) -> Cambiar Canal
-
-      if (touchY < screenHeight * 0.25) {
-          adjustEyes(0.1); 
-      } else if (touchY > screenHeight * 0.75) {
-          adjustEyes(-0.1); 
-      } else {
-          window.playNext();
-          setTimeout(refreshVR, 600);
-      }
+        if(!document.body.classList.contains('is-vr') || e.target.id === 'btn-exit-vr') return;
+        const y = e.touches[0].clientY / window.innerHeight;
+        if(y < 0.25) window.adjustEyes(0.1);
+        else if(y > 0.75) window.adjustEyes(-0.1);
+        else window.playNext();
     });
-
-    window.addEventListener('keydown', (e) => {
-      if (!document.body.classList.contains('is-vr')) return;
-
-      const k = e.code;
-      const isUp = k === 'ArrowUp' || k === 'PageUp' || k === 'KeyW';
-      const isDown = k === 'ArrowDown' || k === 'PageDown' || k === 'KeyS';
-      const isAction = k === 'Enter' || k === 'Space' || k === 'NumpadEnter';
-
-      if (isUp) { e.preventDefault(); adjustEyes(0.05); } 
-      else if (isDown) { e.preventDefault(); adjustEyes(-0.05); }
-      else if (isAction) { window.playNext(); setTimeout(refreshVR, 600); }
-    });
-    
-    window.addEventListener('click', (e) => {
-       if(document.body.classList.contains('is-vr') && e.target.id !== 'btn-exit-vr') {
-           window.playNext();
-           setTimeout(refreshVR, 600);
-       }
-    });
-
   </script>
 </body>
 </html>
