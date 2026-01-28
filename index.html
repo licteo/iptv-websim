@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover" />
-  <title>IPTV VR Universal Pro+</title>
+  <title>IPTV & YT VR Fix</title>
 
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
 
@@ -39,11 +39,14 @@
 
     #feedback{ position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:rgba(0,0,0,0.9); color:#fff; padding:15px 25px; border-radius:30px; display:none; z-index:10005; pointer-events:none; border:1px solid var(--accent); white-space:nowrap; font-size: 20px; font-weight: bold; }
 
-    .video-container{background:#000; border-radius:12px; position:relative; overflow:hidden; width:100%; height:320px; border:1px solid #22303a; cursor: pointer;}
+    .video-container{background:#000; border-radius:12px; position:relative; overflow:hidden; width:100%; height:320px; border:1px solid #22303a;}
     #fullPlayerArea { width:100%; height:100%; position:relative; background:#000; display:flex; align-items:center }
     
+    /* Esta capa detecta clics sobre el video o YouTube sin bloquear el audio */
+    #click-overlay { position: absolute; inset: 0; z-index: 10; cursor: pointer; background: transparent; }
+
     #videoPlayer, #webFrame { width:100%; height:100%; border:none; display:none; }
-    video { object-fit:contain; pointer-events: none; }
+    video { object-fit:contain; }
 
     @media (max-width:640px){ .video-container{height:230px} }
   </style>
@@ -53,6 +56,7 @@
 <body>
 
   <div id="vr-layer">
+    <div id="vr-click-surface" style="position:fixed; inset:0; z-index:9997;"></div>
     <button id="btn-exit-vr">SALIR VR</button>
     <div id="center-guide"></div>
 
@@ -69,15 +73,15 @@
   </div>
 
   <div class="container">
-    <h1 style="text-align:center; color:var(--accent); margin:0 0 10px 0; font-size:22px">IPTV & YouTube VR</h1>
+    <h1 style="text-align:center; color:var(--accent); margin:0 0 10px 0; font-size:22px">IPTV VR Universal Pro</h1>
     
     <div class="input-section">
-      <input id="urlIn" type="text" placeholder="URL M3U8, MP4 o YouTube..." />
+      <input id="urlIn" type="text" placeholder="URL M3U8 o YouTube..." />
       <button onclick="window.addUrl()" class="btn-load">AÑADIR</button>
     </div>
 
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px">
-        <button onclick="window.toggleFS()" class="btn-fs">PANTALLA COMPLETA</button>
+        <button onclick="window.toggleFS()" class="btn-fs">FULL SCREEN</button>
         <button onclick="window.toggleVR()" class="btn-vr">MODO VR</button>
         <button onclick="window.clearAll()" class="btn-clear">Limpiar</button>
     </div>
@@ -86,7 +90,7 @@
 
     <div class="video-container" id="mainVideoContainer">
       <div id="fullPlayerArea">
-        <div id="feedback"></div>
+        <div id="click-overlay"></div> <div id="feedback"></div>
         <video id="videoPlayer" crossorigin="anonymous" playsinline webkit-playsinline></video>
         <iframe id="webFrame" allow="autoplay; fullscreen; encrypted-media"></iframe>
       </div>
@@ -103,18 +107,16 @@
     const video = document.getElementById('videoPlayer');
     const iframe = document.getElementById('webFrame');
     const feedback = document.getElementById('feedback');
-    const mainContainer = document.getElementById('mainVideoContainer');
     let hls = null;
 
-    // --- LÓGICA DE URL (IPTV Y YOUTUBE) ---
     function getCleanUrl(url) {
         if (url.includes('youtube.com/watch?v=')) {
             const id = url.split('v=')[1].split('&')[0];
-            return `https://www.youtube.com/embed/${id}?autoplay=1&controls=1`;
+            return `https://www.youtube.com/embed/${id}?autoplay=1&mute=0&controls=0&origin=${window.location.origin}`;
         }
         if (url.includes('youtu.be/')) {
             const id = url.split('youtu.be/')[1].split('?')[0];
-            return `https://www.youtube.com/embed/${id}?autoplay=1&controls=1`;
+            return `https://www.youtube.com/embed/${id}?autoplay=1&mute=0&controls=0&origin=${window.location.origin}`;
         }
         return url;
     }
@@ -128,26 +130,31 @@
             left.setAttribute('position', `-${state.eyeGap} 0 0`);
             right.setAttribute('position', `${state.eyeGap} 0 0`);
             if(document.body.classList.contains('is-vr')) showFeedback(`IPD: ${state.eyeGap.toFixed(2)}`);
-            window.saveState();
         }
     }
 
     window.adjustEyes = (delta) => {
         state.eyeGap = Math.max(1.0, Math.min(3.5, state.eyeGap + delta));
         updateEyeGapUI();
+        window.saveState();
     };
 
     window.playUrl = async (rawUrl, index) => {
+      // 1. LIMPIEZA TOTAL PARA EVITAR DOBLE AUDIO
+      if(hls){ hls.destroy(); hls = null; }
+      video.pause();
+      video.src = "";
+      video.load();
+      iframe.src = ""; // Esto mata el proceso de YouTube anterior
+      
       state.current = index;
       window.saveState();
       render();
-      const url = getCleanUrl(rawUrl);
-
-      if(hls){ hls.destroy(); hls = null; }
       
-      const isDirectVideo = url.toLowerCase().includes('.m3u8') || url.match(/\.(mp4|webm)$/i);
+      const url = getCleanUrl(rawUrl);
+      const isDirect = url.toLowerCase().includes('.m3u8') || url.match(/\.(mp4|webm)$/i);
 
-      if (isDirectVideo) {
+      if (isDirect) {
         iframe.style.display = "none"; 
         video.style.display = "block";
         if (url.includes('.m3u8')) {
@@ -157,15 +164,16 @@
           } else { video.src = url; video.play().catch(()=>{}); }
         } else { video.src = url; video.play().catch(()=>{}); }
       } else {
-        video.style.display = "none"; video.pause();
-        iframe.style.display = "block"; iframe.src = url;
+        video.style.display = "none";
+        iframe.style.display = "block";
+        iframe.src = url;
       }
     };
 
     window.addUrl = () => {
       const input = document.getElementById('urlIn');
       if(input.value.trim()){
-        state.channels.push({title: "C" + (state.channels.length + 1), url: input.value.trim()});
+        state.channels.push({title: "Canal " + (state.channels.length + 1), url: input.value.trim()});
         input.value = ""; window.saveState(); render();
         window.playUrl(state.channels[state.channels.length-1].url, state.channels.length-1);
       }
@@ -174,14 +182,13 @@
     window.playNext = () => {
       if(state.channels.length === 0) return;
       let next = (state.current + 1) % state.channels.length;
-      showFeedback("SIGUIENTE CANAL ▶");
+      showFeedback("CAMBIANDO...");
       window.playUrl(state.channels[next].url, next);
     };
 
     window.toggleVR = () => {
-      const isEntering = !document.body.classList.contains('is-vr');
       document.body.classList.toggle('is-vr');
-      if (isEntering) {
+      if (document.body.classList.contains('is-vr')) {
         document.documentElement.requestFullscreen?.().catch(()=>{});
         updateEyeGapUI();
       } else if(document.fullscreenElement) {
@@ -196,7 +203,7 @@
     };
 
     window.clearAll = () => {
-      if(confirm("¿Borrar todo?")) {
+      if(confirm("¿Borrar lista?")) {
         state.channels = []; state.current = -1;
         window.saveState(); render();
         video.src = ""; iframe.src = "";
@@ -210,62 +217,44 @@
 
     function render() {
       const listDiv = document.getElementById('list');
-      if(state.channels.length === 0) {
-        listDiv.innerHTML = '<div style="padding:20px; text-align:center; color:#444">Lista vacía</div>';
-        return;
-      }
       listDiv.innerHTML = state.channels.map((ch, i) => 
         `<div class="channel-item ${state.current === i ? 'active' : ''}" onclick="window.playUrl('${ch.url}', ${i})">
-            <span>${ch.title}</span><span style="color:var(--accent)">VER</span>
+            <span>${ch.title}</span><span style="font-size:10px">${ch.url.substring(0,15)}...</span>
          </div>`
-      ).join('');
+      ).join('') || '<div style="padding:20px; text-align:center; color:#444">Lista vacía</div>';
     }
 
-    // --- EVENTOS UNIVERSALES (RATÓN, CONTROL, TÁCTIL) ---
+    // --- MANEJO DE CLICS MEJORADO (CAPA DE INTERCEPTACIÓN) ---
 
-    document.getElementById('btn-exit-vr').addEventListener('click', (e) => {
-        e.stopPropagation(); window.toggleVR();
-    });
-
-    window.addEventListener('mousedown', (e) => {
+    const handleGlobalInteraction = (e) => {
         if (e.target.id === 'btn-exit-vr' || e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON') return;
         
-        const isOverVideo = mainContainer.contains(e.target) || document.body.classList.contains('is-vr');
-        if (isOverVideo && e.button === 0) {
-            window.playNext();
+        // En modo VR
+        if(document.body.classList.contains('is-vr')){
+            const touchY = (e.touches ? e.touches[0].clientY : e.clientY) / window.innerHeight;
+            if (touchY < 0.20) window.adjustEyes(0.1);
+            else if (touchY > 0.80) window.adjustEyes(-0.1);
+            else window.playNext();
+        } else {
+            // En modo Normal/FS, solo si clicamos en el overlay del video
+            if (e.target.id === 'click-overlay') window.playNext();
         }
-    });
+    };
 
-    window.addEventListener('touchstart', (e) => {
-      if (e.target.id === 'btn-exit-vr' || e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON') return;
-      
-      const isOverVideo = mainContainer.contains(e.target) || document.body.classList.contains('is-vr');
-      if (!isOverVideo) return;
-
-      const touchY = e.touches[0].clientY / window.innerHeight;
-
-      if (document.body.classList.contains('is-vr')) {
-          if (touchY < 0.25) window.adjustEyes(0.1);
-          else if (touchY > 0.75) window.adjustEyes(-0.1);
-          else window.playNext();
-          e.preventDefault();
-      } else {
-          window.playNext();
-      }
-    }, { passive: false });
+    document.getElementById('click-overlay').addEventListener('mousedown', handleGlobalInteraction);
+    document.getElementById('vr-click-surface').addEventListener('mousedown', handleGlobalInteraction);
+    document.getElementById('click-overlay').addEventListener('touchstart', (e) => { e.preventDefault(); handleGlobalInteraction(e); }, {passive:false});
+    document.getElementById('vr-click-surface').addEventListener('touchstart', (e) => { e.preventDefault(); handleGlobalInteraction(e); }, {passive:false});
 
     window.addEventListener('keydown', (e) => {
-      const k = e.code;
-      if (k === 'ArrowUp' || k === 'KeyW') { 
-          if(document.body.classList.contains('is-vr')) window.adjustEyes(0.05); 
-      }
-      if (k === 'ArrowDown' || k === 'KeyS') { 
-          if(document.body.classList.contains('is-vr')) window.adjustEyes(-0.05); 
-      }
-      if (k === 'Enter' || k === 'Space') { 
-          window.playNext(); 
+      if (e.code === 'Enter' || e.code === 'Space') window.playNext();
+      if (document.body.classList.contains('is-vr')) {
+          if (e.code === 'ArrowUp') window.adjustEyes(0.05);
+          if (e.code === 'ArrowDown') window.adjustEyes(-0.05);
       }
     });
+
+    document.getElementById('btn-exit-vr').onclick = (e) => { e.stopPropagation(); window.toggleVR(); };
 
     render();
     updateEyeGapUI();
