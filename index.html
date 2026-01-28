@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover" />
-  <title>IPTV VR Ultimate Pro v3.1</title>
+  <title>IPTV VR Multi-Control</title>
 
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
 
@@ -29,10 +29,11 @@
     .channel-item:hover{background:#111b25}
     .channel-item.active{border-left:4px solid var(--accent); background:#111b25}
 
+    /* CAPA VR */
     #vr-layer { display:none; position:fixed; inset:0; z-index:9999; background:#000 }
     body.is-vr #vr-layer { display:block }
     
-    #btn-exit-vr { position:fixed; top:15px; right:15px; z-index:10000; background:var(--danger); color:white; padding:10px 20px; border-radius:20px; font-weight:bold; border:2px solid white; cursor: pointer; }
+    #btn-exit-vr { position:fixed; top:15px; right:15px; z-index:10000; background:var(--danger); color:white; padding:12px 24px; border-radius:30px; font-weight:bold; border:2px solid white; cursor: pointer; }
 
     #center-guide {
         position: fixed;
@@ -44,7 +45,7 @@
         pointer-events: none;
     }
 
-    #feedback{ position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:rgba(0,0,0,0.9); color:#fff; padding:15px 25px; border-radius:30px; display:none; z-index:10005; pointer-events:none; border:1px solid var(--accent); white-space:nowrap; font-size: 18px; font-weight: bold; }
+    #feedback{ position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:rgba(0,0,0,0.9); color:#fff; padding:15px 25px; border-radius:30px; display:none; z-index:10005; pointer-events:none; border:1px solid var(--accent); white-space:nowrap; font-size: 20px; font-weight: bold; }
 
     .video-container{background:#000; border-radius:12px; position:relative; overflow:hidden; width:100%; height:320px; border:1px solid #22303a}
     #fullPlayerArea { width:100%; height:100%; position:relative; background:#000; display:flex; align-items:center }
@@ -60,7 +61,7 @@
 <body>
 
   <div id="vr-layer">
-    <button id="btn-exit-vr" onclick="window.toggleVR(event)">SALIR VR</button>
+    <button id="btn-exit-vr">SALIR VR</button>
     <div id="center-guide"></div>
 
     <a-scene embedded loading-screen="enabled:false" vr-mode-ui="enabled:false">
@@ -76,7 +77,7 @@
   </div>
 
   <div class="container">
-    <h1 style="text-align:center; color:var(--accent); margin:0 0 10px 0; font-size:22px">IPTV VR Player</h1>
+    <h1 style="text-align:center; color:var(--accent); margin:0 0 10px 0; font-size:22px">IPTV VR Multi-Control</h1>
     
     <div class="input-section">
       <input id="urlIn" type="text" placeholder="URL (.m3u8, .mp4 o Web)" />
@@ -85,7 +86,7 @@
 
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px">
         <button onclick="window.toggleFS()" class="btn-fs">PANTALLA COMPLETA</button>
-        <button onclick="window.toggleVR(event)" class="btn-vr">MODO VR</button>
+        <button onclick="window.toggleVR()" class="btn-vr">MODO VR</button>
         <button onclick="window.clearAll()" class="btn-clear">Borrar Todo</button>
     </div>
 
@@ -132,7 +133,7 @@
             left.setAttribute('position', `-${state.eyeGap} 0 0`);
             right.setAttribute('position', `${state.eyeGap} 0 0`);
             if(document.body.classList.contains('is-vr')){
-                showFeedback(`IPD: ${state.eyeGap.toFixed(2)}`);
+                showFeedback(`Separación: ${state.eyeGap.toFixed(2)}`);
             }
             window.saveState();
         }
@@ -148,6 +149,7 @@
       window.saveState();
       render();
       if(hls){ hls.destroy(); hls = null; }
+      
       const isM3U8 = url.toLowerCase().includes('.m3u8');
       if (isM3U8) {
         iframe.style.display = "none"; video.style.display = "block";
@@ -167,7 +169,7 @@
     window.addUrl = () => {
       const input = document.getElementById('urlIn');
       if(input.value.trim()){
-        state.channels.push({title: "Canal " + (state.channels.length + 1), url: input.value.trim()});
+        state.channels.push({title: "C" + (state.channels.length + 1) + ": " + input.value.substring(0,10), url: input.value.trim()});
         input.value = ""; window.saveState(); render();
         window.playUrl(state.channels[state.channels.length-1].url, state.channels.length-1);
       }
@@ -176,19 +178,18 @@
     window.playNext = () => {
       if(state.channels.length === 0) return;
       let next = (state.current + 1) % state.channels.length;
-      showFeedback("SIGUIENTE ▶");
+      showFeedback("SIGUIENTE CANAL ▶");
       window.playUrl(state.channels[next].url, next);
     };
 
-    window.toggleVR = (e) => {
-      if(e) e.stopPropagation();
+    window.toggleVR = () => {
       const isEntering = !document.body.classList.contains('is-vr');
       document.body.classList.toggle('is-vr');
       if (isEntering) {
         document.documentElement.requestFullscreen?.().catch(()=>{});
         updateEyeGapUI();
       } else {
-        document.exitFullscreen?.().catch(()=>{});
+        if(document.fullscreenElement) document.exitFullscreen?.().catch(()=>{});
       }
     };
 
@@ -219,39 +220,62 @@
       }
       listDiv.innerHTML = state.channels.map((ch, i) => 
         `<div class="channel-item ${state.current === i ? 'active' : ''}" onclick="window.playUrl('${ch.url}', ${i})">
-            <span>${ch.title}</span><span>PLAY</span>
+            <span>${ch.title}</span><span style="color:var(--accent)">VER</span>
          </div>`
       ).join('');
     }
 
-    render();
-    updateEyeGapUI();
-    if(state.current >= 0) window.playUrl(state.channels[state.current].url, state.current);
+    // --- MANEJO DE EVENTOS UNIFICADO (PC, CONTROL, TÁCTIL) ---
 
-    // --- CORRECCIÓN DE CLICK DE CONTROL ---
-    window.addEventListener('click', (e) => {
-        // Solo actuar si estamos en VR y NO hemos pulsado el botón de salir
-        if (document.body.classList.contains('is-vr') && e.target.id !== 'btn-exit-vr') {
-            e.preventDefault();
-            window.playNext();
-        }
-    }, true); // El 'true' ayuda a capturar el evento antes que otros elementos
-
-    window.addEventListener('touchstart', (e) => {
-      if (!document.body.classList.contains('is-vr') || e.target.id === 'btn-exit-vr') return;
-      const touchY = e.touches[0].clientY / window.innerHeight;
-      if (touchY < 0.25) window.adjustEyes(0.1); 
-      else if (touchY > 0.75) window.adjustEyes(-0.1); 
-      // El toque central ya no llama a playNext aquí porque el listener de 'click' arriba lo hará por nosotros (los toques también disparan clicks)
+    // 1. Manejo del Clic de Salida (Independiente)
+    document.getElementById('btn-exit-vr').addEventListener('click', (e) => {
+        e.stopPropagation(); // Evita que el clic llegue al listener global
+        window.toggleVR();
     });
 
+    // 2. Listener Global para Clic (Ratón de PC y Botón principal del mando)
+    window.addEventListener('mousedown', (e) => {
+        if (!document.body.classList.contains('is-vr')) return;
+        if (e.target.id === 'btn-exit-vr') return;
+
+        // Si es clic izquierdo (0), cambiar de canal
+        if (e.button === 0) {
+            window.playNext();
+        }
+    });
+
+    // 3. Listener Táctil (Zonificado)
+    window.addEventListener('touchstart', (e) => {
+      if (!document.body.classList.contains('is-vr')) return;
+      if (e.target.id === 'btn-exit-vr') return;
+
+      const touchY = e.touches[0].clientY / window.innerHeight;
+      
+      if (touchY < 0.25) {
+          window.adjustEyes(0.1); 
+      } else if (touchY > 0.75) {
+          window.adjustEyes(-0.1); 
+      } else {
+          window.playNext();
+      }
+      e.preventDefault(); // Evita clics fantasmas
+    }, { passive: false });
+
+    // 4. Listener de Teclado (Flechas del PC / Joystick del mando)
     window.addEventListener('keydown', (e) => {
       if (!document.body.classList.contains('is-vr')) return;
+      
       const k = e.code;
       if (k === 'ArrowUp' || k === 'KeyW') { e.preventDefault(); window.adjustEyes(0.05); }
       if (k === 'ArrowDown' || k === 'KeyS') { e.preventDefault(); window.adjustEyes(-0.05); }
       if (k === 'Enter' || k === 'Space') { e.preventDefault(); window.playNext(); }
     });
+
+    // Inicialización
+    render();
+    updateEyeGapUI();
+    if(state.current >= 0) window.playUrl(state.channels[state.current].url, state.current);
+    
   </script>
 </body>
 </html>
