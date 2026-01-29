@@ -3,46 +3,53 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover" />
-  <title>IPTV & YouTube VR Pro</title>
+  <title>IPTV & YouTube VR Pro + Edit</title>
 
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
 
   <style>
-    :root{--bg:#051019;--accent:#00d4ff;--danger:#ff4444;--success:#39ff14}
+    :root{--bg:#051019;--accent:#00d4ff;--danger:#ff4444;--success:#39ff14;--warning:#ffbb00}
     *{box-sizing:border-box;font-family:sans-serif}
     html,body{height:100%;margin:0;background:var(--bg);color:#e6eef6;overflow:hidden}
     
     .container{max-width:980px;margin:12px auto;padding:15px;transition:opacity 0.3s}
     body.is-vr .container { opacity:0; pointer-events:none; position:absolute; z-index:-1 }
     
-    /* INPUTS MEJORADOS */
+    /* INPUTS */
     .input-section{display:flex;gap:8px;margin:8px 0;flex-wrap:wrap}
     input{padding:12px;border-radius:8px;border:1px solid #22303a;background:#0b1115;color:#fff;font-size:16px}
-    #nameIn { flex: 1; min-width: 100px; } /* Input nombre */
-    #urlIn { flex: 2; min-width: 150px; }  /* Input URL */
+    #nameIn { flex: 1; min-width: 90px; }
+    #urlIn { flex: 2; min-width: 140px; }
     
-    button{border:none;padding:12px;border-radius:8px;font-weight:bold;cursor:pointer}
-    .btn-load{background:var(--accent); color:#000}
-    .btn-fs{background:var(--success); color:#000}
+    button{border:none;padding:12px;border-radius:8px;font-weight:bold;cursor:pointer; color:#000}
+    .btn-load{background:var(--accent)}
+    .btn-fs{background:var(--success)}
     .btn-vr{background:#ff00ff; color:#fff}
     .btn-clear{background:#444; color:#fff; font-size:11px; padding:5px 10px}
 
+    /* LISTA DE CANALES MEJORADA */
     .channel-list{background:#071018;border-radius:10px;padding:5px;max-height:160px;overflow:auto;border:1px solid #16202a;margin-bottom:10px}
-    .channel-item{padding:12px;border-bottom:1px solid #16202a;cursor:pointer; display:flex; justify-content:space-between; align-items:center}
+    .channel-item{padding:8px 12px; border-bottom:1px solid #16202a; cursor:pointer; display:flex; justify-content:space-between; align-items:center}
     .channel-item:hover{background:#111b25}
     .channel-item.active{border-left:4px solid var(--accent); background:#111b25}
+    
+    .channel-info { flex: 1; display:flex; flex-direction:column; overflow:hidden; }
+    .channel-name { font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .channel-url { font-size:10px; color:#666; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 
+    /* BOTONES DE EDICIÓN */
+    .channel-actions { display:flex; gap:8px; margin-left:10px; }
+    .btn-icon { padding:6px 10px; border-radius:5px; font-size:14px; cursor:pointer; transition:0.2s }
+    .btn-edit { background:var(--warning); color:#000; }
+    .btn-del { background:var(--danger); color:#fff; }
+    .btn-icon:hover { transform:scale(1.1); filter:brightness(1.1); }
+
+    /* VR LAYER */
     #vr-layer { display:none; position:fixed; inset:0; z-index:9999; background:#000}
     body.is-vr #vr-layer { display:block }
     
     body.is-vr.is-youtube #webFrame {
-        display: block !important;
-        position: fixed;
-        width: 200%;
-        height: 100%;
-        left: -50%;
-        z-index: 9997;
-        pointer-events: none;
+        display: block !important; position: fixed; width: 200%; height: 100%; left: -50%; z-index: 9997; pointer-events: none;
     }
     body.is-vr.is-youtube a-scene { opacity: 0.1; }
 
@@ -51,10 +58,8 @@
     body.is-vr #vr-click-surface { display:block }
 
     #btn-exit-vr { position:fixed; top:15px; right:15px; z-index:10002; background:var(--danger); color:white; padding:12px 24px; border-radius:30px; font-weight:bold; border:2px solid white; cursor: pointer; }
-
     #center-guide { position: fixed; top: 0; bottom: 0; left: 50%; width: 2px; background: rgba(255, 255, 255, 0.4); transform: translateX(-50%); z-index: 9998; pointer-events: none; display:none; }
     body.is-vr #center-guide { display: block; }
-
     #feedback{ position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:rgba(0,0,0,0.9); color:#fff; padding:15px 25px; border-radius:30px; display:none; z-index:10005; pointer-events:none; border:1px solid var(--accent); white-space:nowrap; font-size: 20px; font-weight: bold; }
 
     .video-container{background:#000; border-radius:12px; position:relative; overflow:hidden; width:100%; height:320px; border:1px solid #22303a;}
@@ -91,15 +96,15 @@
     <h1 style="text-align:center; color:var(--accent); margin:0 0 10px 0; font-size:22px">IPTV & YouTube VR Pro</h1>
     
     <div class="input-section">
-      <input id="nameIn" type="text" placeholder="Nombre (Ej: HBO)" />
+      <input id="nameIn" type="text" placeholder="Nombre..." />
       <input id="urlIn" type="text" placeholder="URL M3U8 o YouTube..." />
       <button onclick="window.addUrl()" class="btn-load">AÑADIR</button>
     </div>
 
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px">
-        <button onclick="window.toggleFS()" class="btn-fs">PANTALLA COMPLETA</button>
+        <button onclick="window.toggleFS()" class="btn-fs">FULL SCREEN</button>
         <button onclick="window.toggleVR()" class="btn-vr">MODO VR</button>
-        <button onclick="window.clearAll()" class="btn-clear">Limpiar</button>
+        <button onclick="window.clearAll()" class="btn-clear">Limpiar Todo</button>
     </div>
 
     <div class="channel-list" id="list"></div>
@@ -117,7 +122,7 @@
   <script type="module">
     import Hls from "hls.js";
 
-    const STORAGE_KEY = 'iptv_master_config_v5'; // Actualizada key para evitar conflictos antiguos
+    const STORAGE_KEY = 'iptv_master_v6_final';
     const savedData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || { channels: [], current: -1, eyeGap: 2.15 };
     const state = { ...savedData };
     
@@ -172,26 +177,63 @@
       }
     };
 
-    // FUNCIÓN AÑADIR ACTUALIZADA CON NOMBRE
     window.addUrl = () => {
-      const urlInput = document.getElementById('urlIn');
-      const nameInput = document.getElementById('nameIn');
-      const urlVal = urlInput.value.trim();
-      const nameVal = nameInput.value.trim();
-
-      if(urlVal){
-        // Si hay nombre úsalo, si no, genera "Canal X"
-        const finalTitle = nameVal || ("Canal " + (state.channels.length + 1));
-        
-        state.channels.push({title: finalTitle, url: urlVal});
+      const u = document.getElementById('urlIn');
+      const n = document.getElementById('nameIn');
+      if(u.value.trim()){
+        const title = n.value.trim() || ("Canal " + (state.channels.length + 1));
+        state.channels.push({title: title, url: u.value.trim()});
         const idx = state.channels.length - 1;
-        
-        urlInput.value = ""; 
-        nameInput.value = ""; // Limpiar ambos
-        window.saveState(); 
-        render();
+        u.value = ""; n.value = ""; 
+        window.saveState(); render();
         window.playUrl(state.channels[idx].url, idx);
       }
+    };
+
+    // FUNCIONES DE EDICIÓN Y ELIMINACIÓN
+    window.deleteChannel = (index, event) => {
+        event.stopPropagation(); // Evitar reproducir al hacer clic en borrar
+        if(confirm(`¿Eliminar "${state.channels[index].title}"?`)) {
+            const wasPlaying = (state.current === index);
+            state.channels.splice(index, 1);
+            
+            // Ajustar el índice actual
+            if(state.current > index) state.current--; 
+            if(state.channels.length === 0) state.current = -1;
+            
+            // Si borramos el que se veia, limpiamos pantalla
+            if(wasPlaying) {
+                 video.src = ""; iframe.src = ""; state.current = -1;
+                 showFeedback("Eliminado");
+            } else if (state.current >= 0) {
+                 // Si borramos uno anterior, actualizamos el índice guardado
+                 state.current = state.current; 
+            }
+            
+            window.saveState();
+            render();
+        }
+    };
+
+    window.editChannel = (index, event) => {
+        event.stopPropagation(); // Evitar reproducir
+        const ch = state.channels[index];
+        const newTitle = prompt("Editar Nombre:", ch.title);
+        if(newTitle === null) return;
+        
+        const newUrl = prompt("Editar URL:", ch.url);
+        if(newUrl === null) return;
+
+        if(newTitle && newUrl) {
+            state.channels[index] = { title: newTitle, url: newUrl };
+            window.saveState();
+            render();
+            // Si editamos el canal actual, lo recargamos
+            if(state.current === index) {
+                showFeedback("Actualizado");
+                window.playUrl(newUrl, index);
+            }
+        }
     };
 
     window.playNext = () => {
@@ -201,10 +243,8 @@
       window.playUrl(state.channels[next].url, next);
     };
 
-    // NUEVA FUNCIÓN PARA IR HACIA ATRÁS
     window.playPrev = () => {
       if(state.channels.length === 0) return;
-      // Cálculo matemático para evitar negativos
       let prev = (state.current - 1 + state.channels.length) % state.channels.length;
       showFeedback("◀ ANTERIOR");
       window.playUrl(state.channels[prev].url, prev);
@@ -227,7 +267,7 @@
     };
 
     window.clearAll = () => {
-      if(confirm("¿Borrar todo?")) {
+      if(confirm("¿Borrar TODA la lista?")) {
         state.channels = []; state.current = -1;
         window.saveState(); render();
         video.src = ""; iframe.src = "";
@@ -241,30 +281,32 @@
 
     function render() {
       const listDiv = document.getElementById('list');
-      listDiv.innerHTML = state.channels.map((ch, i) => 
-        `<div class="channel-item ${state.current === i ? 'active' : ''}" onclick="window.playUrl('${ch.url}', ${i})">
-            <span>${ch.title}</span><span style="font-size:10px; color:var(--accent)">VER</span>
-         </div>`
-      ).join('') || '<div style="padding:20px; text-align:center; color:#444">Lista vacía</div>';
+      listDiv.innerHTML = state.channels.map((ch, i) => `
+        <div class="channel-item ${state.current === i ? 'active' : ''}" onclick="window.playUrl('${ch.url}', ${i})">
+            <div class="channel-info">
+                <div class="channel-name">${ch.title}</div>
+                <div class="channel-url">${ch.url}</div>
+            </div>
+            <div class="channel-actions">
+                <button class="btn-icon btn-edit" onclick="window.editChannel(${i}, event)">✏️</button>
+                <button class="btn-icon btn-del" onclick="window.deleteChannel(${i}, event)">🗑️</button>
+            </div>
+         </div>
+      `).join('') || '<div style="padding:20px; text-align:center; color:#444">Lista vacía</div>';
     }
 
-    // MANEJO INTELIGENTE DE CLICS (IZQ/DER)
+    // CONTROL TÁCTIL (IZQ/DER) y CLIC
     const handleInteraction = (e) => {
-        // Evitar que se active si tocamos inputs o botones
-        if (e.target.tagName === 'INPUT' || e.target.id === 'btn-exit-vr' || e.target.tagName === 'BUTTON') return;
+        if (['INPUT','BUTTON'].includes(e.target.tagName) || e.target.closest('.channel-actions') || e.target.id === 'btn-exit-vr') return;
         
-        // Obtener coordenadas
         const clientX = e.touches ? e.touches[0].clientX : e.clientX;
         const clientY = e.touches ? e.touches[0].clientY : e.clientY;
         const width = window.innerWidth;
         const height = window.innerHeight;
         
-        // Calcular posición horizontal (0 a 1)
-        const xRatio = clientX / width;
-        const yRatio = clientY / height;
-
-        // LÓGICA VR (Prioridad al ajuste de ojos arriba/abajo)
+        // Ajuste Ojos VR (Arriba/Abajo)
         if(document.body.classList.contains('is-vr')) {
+            const yRatio = clientY / height;
             if (yRatio < 0.25) { 
                 state.eyeGap = Math.max(1.0, state.eyeGap + 0.1); updateEyeGapUI(); window.saveState(); return;
             } 
@@ -273,15 +315,9 @@
             }
         }
 
-        // LÓGICA DE NAVEGACIÓN (Centro vertical en VR, o pantalla completa normal)
-        // Si clic a la derecha (> 50%)
-        if (xRatio > 0.5) {
-            window.playNext();
-        } 
-        // Si clic a la izquierda (< 50%)
-        else {
-            window.playPrev();
-        }
+        // Navegación Canales (Izquierda / Derecha)
+        if ((clientX / width) > 0.5) window.playNext();
+        else window.playPrev();
     };
 
     document.getElementById('click-overlay').onclick = handleInteraction;
@@ -294,7 +330,7 @@
 
     render();
     updateEyeGapUI();
-    if(state.current >= 0) window.playUrl(state.channels[state.current].url, state.current);
+    if(state.current >= 0 && state.channels[state.current]) window.playUrl(state.channels[state.current].url, state.current);
   </script>
 </body>
 </html>
