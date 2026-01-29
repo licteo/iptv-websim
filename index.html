@@ -15,10 +15,13 @@
     .container{max-width:980px;margin:12px auto;padding:15px;transition:opacity 0.3s}
     body.is-vr .container { opacity:0; pointer-events:none; position:absolute; z-index:-1 }
     
+    /* INPUTS MEJORADOS */
     .input-section{display:flex;gap:8px;margin:8px 0;flex-wrap:wrap}
-    input{flex:1;padding:12px;border-radius:8px;border:1px solid #22303a;background:#0b1115;color:#fff;font-size:16px}
-    button{border:none;padding:12px;border-radius:8px;font-weight:bold;cursor:pointer}
+    input{padding:12px;border-radius:8px;border:1px solid #22303a;background:#0b1115;color:#fff;font-size:16px}
+    #nameIn { flex: 1; min-width: 100px; } /* Input nombre */
+    #urlIn { flex: 2; min-width: 150px; }  /* Input URL */
     
+    button{border:none;padding:12px;border-radius:8px;font-weight:bold;cursor:pointer}
     .btn-load{background:var(--accent); color:#000}
     .btn-fs{background:var(--success); color:#000}
     .btn-vr{background:#ff00ff; color:#fff}
@@ -26,12 +29,12 @@
 
     .channel-list{background:#071018;border-radius:10px;padding:5px;max-height:160px;overflow:auto;border:1px solid #16202a;margin-bottom:10px}
     .channel-item{padding:12px;border-bottom:1px solid #16202a;cursor:pointer; display:flex; justify-content:space-between; align-items:center}
+    .channel-item:hover{background:#111b25}
     .channel-item.active{border-left:4px solid var(--accent); background:#111b25}
 
     #vr-layer { display:none; position:fixed; inset:0; z-index:9999; background:#000}
     body.is-vr #vr-layer { display:block }
     
-    /* TRUCO YOUTUBE VR: Duplicar vista mediante el iframe por debajo de A-Frame */
     body.is-vr.is-youtube #webFrame {
         display: block !important;
         position: fixed;
@@ -41,7 +44,7 @@
         z-index: 9997;
         pointer-events: none;
     }
-    body.is-vr.is-youtube a-scene { opacity: 0.1; } /* Mantiene trackeo pero deja ver el fondo */
+    body.is-vr.is-youtube a-scene { opacity: 0.1; }
 
     #click-overlay { position: absolute; inset: 0; z-index: 10001; cursor: pointer; background: transparent; }
     #vr-click-surface { position:fixed; inset:0; z-index:10000; display:none }
@@ -88,7 +91,8 @@
     <h1 style="text-align:center; color:var(--accent); margin:0 0 10px 0; font-size:22px">IPTV & YouTube VR Pro</h1>
     
     <div class="input-section">
-      <input id="urlIn" type="text" placeholder="URL Canal o YouTube..." />
+      <input id="nameIn" type="text" placeholder="Nombre (Ej: HBO)" />
+      <input id="urlIn" type="text" placeholder="URL M3U8 o YouTube..." />
       <button onclick="window.addUrl()" class="btn-load">AÑADIR</button>
     </div>
 
@@ -113,7 +117,7 @@
   <script type="module">
     import Hls from "hls.js";
 
-    const STORAGE_KEY = 'iptv_master_config_v4';
+    const STORAGE_KEY = 'iptv_master_config_v5'; // Actualizada key para evitar conflictos antiguos
     const savedData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || { channels: [], current: -1, eyeGap: 2.15 };
     const state = { ...savedData };
     
@@ -136,12 +140,11 @@
         if(left && right) {
             left.setAttribute('position', `-${state.eyeGap} 0 0`);
             right.setAttribute('position', `${state.eyeGap} 0 0`);
-            if(document.body.classList.contains('is-vr')) showFeedback(`Separación: ${state.eyeGap.toFixed(2)}`);
+            if(document.body.classList.contains('is-vr')) showFeedback(`IPD: ${state.eyeGap.toFixed(2)}`);
         }
     }
 
     window.playUrl = async (rawUrl, index) => {
-      // Limpieza profunda para evitar doble audio
       if(hls){ hls.destroy(); hls = null; }
       video.pause(); video.src = ""; video.load();
       iframe.src = "";
@@ -169,12 +172,24 @@
       }
     };
 
+    // FUNCIÓN AÑADIR ACTUALIZADA CON NOMBRE
     window.addUrl = () => {
-      const input = document.getElementById('urlIn');
-      if(input.value.trim()){
-        state.channels.push({title: "Canal " + (state.channels.length + 1), url: input.value.trim()});
+      const urlInput = document.getElementById('urlIn');
+      const nameInput = document.getElementById('nameIn');
+      const urlVal = urlInput.value.trim();
+      const nameVal = nameInput.value.trim();
+
+      if(urlVal){
+        // Si hay nombre úsalo, si no, genera "Canal X"
+        const finalTitle = nameVal || ("Canal " + (state.channels.length + 1));
+        
+        state.channels.push({title: finalTitle, url: urlVal});
         const idx = state.channels.length - 1;
-        input.value = ""; window.saveState(); render();
+        
+        urlInput.value = ""; 
+        nameInput.value = ""; // Limpiar ambos
+        window.saveState(); 
+        render();
         window.playUrl(state.channels[idx].url, idx);
       }
     };
@@ -182,8 +197,17 @@
     window.playNext = () => {
       if(state.channels.length === 0) return;
       let next = (state.current + 1) % state.channels.length;
-      showFeedback("CAMBIANDO...");
+      showFeedback("SIGUIENTE ▶");
       window.playUrl(state.channels[next].url, next);
+    };
+
+    // NUEVA FUNCIÓN PARA IR HACIA ATRÁS
+    window.playPrev = () => {
+      if(state.channels.length === 0) return;
+      // Cálculo matemático para evitar negativos
+      let prev = (state.current - 1 + state.channels.length) % state.channels.length;
+      showFeedback("◀ ANTERIOR");
+      window.playUrl(state.channels[prev].url, prev);
     };
 
     window.toggleVR = () => {
@@ -224,26 +248,49 @@
       ).join('') || '<div style="padding:20px; text-align:center; color:#444">Lista vacía</div>';
     }
 
-    // EVENTOS UNIFICADOS
+    // MANEJO INTELIGENTE DE CLICS (IZQ/DER)
     const handleInteraction = (e) => {
+        // Evitar que se active si tocamos inputs o botones
         if (e.target.tagName === 'INPUT' || e.target.id === 'btn-exit-vr' || e.target.tagName === 'BUTTON') return;
         
+        // Obtener coordenadas
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        const width = window.innerWidth;
+        const height = window.innerHeight;
+        
+        // Calcular posición horizontal (0 a 1)
+        const xRatio = clientX / width;
+        const yRatio = clientY / height;
+
+        // LÓGICA VR (Prioridad al ajuste de ojos arriba/abajo)
         if(document.body.classList.contains('is-vr')) {
-            const touchY = (e.touches ? e.touches[0].clientY : e.clientY) / window.innerHeight;
-            if (touchY < 0.25) { 
-                state.eyeGap = Math.max(1.0, state.eyeGap + 0.1); updateEyeGapUI(); window.saveState();
-            } else if (touchY > 0.75) { 
-                state.eyeGap = Math.min(3.5, state.eyeGap - 0.1); updateEyeGapUI(); window.saveState();
-            } else { window.playNext(); }
-        } else {
-            if (e.target.id === 'click-overlay') window.playNext();
+            if (yRatio < 0.25) { 
+                state.eyeGap = Math.max(1.0, state.eyeGap + 0.1); updateEyeGapUI(); window.saveState(); return;
+            } 
+            if (yRatio > 0.75) { 
+                state.eyeGap = Math.min(3.5, state.eyeGap - 0.1); updateEyeGapUI(); window.saveState(); return;
+            }
+        }
+
+        // LÓGICA DE NAVEGACIÓN (Centro vertical en VR, o pantalla completa normal)
+        // Si clic a la derecha (> 50%)
+        if (xRatio > 0.5) {
+            window.playNext();
+        } 
+        // Si clic a la izquierda (< 50%)
+        else {
+            window.playPrev();
         }
     };
 
     document.getElementById('click-overlay').onclick = handleInteraction;
     document.getElementById('vr-click-surface').onclick = handleInteraction;
     document.getElementById('btn-exit-vr').onclick = (e) => { e.stopPropagation(); window.toggleVR(); };
-    window.onkeydown = (e) => { if(e.code === 'Enter' || e.code === 'Space') window.playNext(); };
+    window.onkeydown = (e) => { 
+        if(e.code === 'Enter' || e.code === 'Space' || e.code === 'ArrowRight') window.playNext(); 
+        if(e.code === 'ArrowLeft') window.playPrev();
+    };
 
     render();
     updateEyeGapUI();
