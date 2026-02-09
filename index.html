@@ -27,7 +27,7 @@
     .btn-vr{background:#ff00ff; color:#fff}
     .btn-clear{background:#444; color:#fff; font-size:11px; padding:5px 10px}
 
-    /* LISTA DE CANALES MEJORADA */
+    /* LISTA DE CANALES */
     .channel-list{background:#071018;border-radius:10px;padding:5px;max-height:160px;overflow:auto;border:1px solid #16202a;margin-bottom:10px}
     .channel-item{padding:8px 12px; border-bottom:1px solid #16202a; cursor:pointer; display:flex; justify-content:space-between; align-items:center}
     .channel-item:hover{background:#111b25}
@@ -37,14 +37,14 @@
     .channel-name { font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .channel-url { font-size:10px; color:#666; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 
-    /* BOTONES DE EDICIÓN */
+    /* BOTONES ACCION */
     .channel-actions { display:flex; gap:8px; margin-left:10px; }
     .btn-icon { padding:6px 10px; border-radius:5px; font-size:14px; cursor:pointer; transition:0.2s }
     .btn-edit { background:var(--warning); color:#000; }
     .btn-del { background:var(--danger); color:#fff; }
     .btn-icon:hover { transform:scale(1.1); filter:brightness(1.1); }
 
-    /* VR LAYER */
+    /* VR ELEMENTS */
     #vr-layer { display:none; position:fixed; inset:0; z-index:9999; background:#000}
     body.is-vr #vr-layer { display:block }
     
@@ -122,7 +122,7 @@
   <script type="module">
     import Hls from "hls.js";
 
-    const STORAGE_KEY = 'iptv_master_v6_final';
+    const STORAGE_KEY = 'iptv_master_v6_fix';
     const savedData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || { channels: [], current: -1, eyeGap: 2.15 };
     const state = { ...savedData };
     
@@ -149,9 +149,13 @@
         }
     }
 
+    // --- FUNCIÓN PLAYURL REPARADA PARA EVITAR DESCARGAS ---
     window.playUrl = async (rawUrl, index) => {
+      // Limpieza
       if(hls){ hls.destroy(); hls = null; }
-      video.pause(); video.src = ""; video.load();
+      video.pause(); 
+      video.removeAttribute('src'); // Importante para resetear
+      video.load();
       iframe.src = "";
       
       state.current = index;
@@ -159,23 +163,55 @@
       render();
 
       const ytID = getYTID(rawUrl);
+      
+      // 1. ES YOUTUBE
       if (ytID) {
         document.body.classList.add('is-youtube');
         video.style.display = "none";
         iframe.style.display = "block";
         iframe.src = `https://www.youtube.com/embed/${ytID}?autoplay=1&controls=1&rel=0`;
-      } else {
+      } 
+      // 2. ES VIDEO/STREAM
+      else {
         document.body.classList.remove('is-youtube');
         iframe.style.display = "none";
         video.style.display = "block";
-        if (rawUrl.includes('.m3u8')) {
-          if (Hls.isSupported()) {
-            hls = new Hls(); hls.loadSource(rawUrl); hls.attachMedia(video);
+
+        // Detectar si es un archivo estático obvio (mp4/webm)
+        const isStaticFile = rawUrl.match(/\.(mp4|webm|ogg|mov)$/i);
+
+        // INTENTO 1: Usar HLS.js (Para .m3u8 y streams ocultos sin extensión)
+        if (Hls.isSupported() && !isStaticFile) {
+            hls = new Hls();
+            hls.loadSource(rawUrl);
+            hls.attachMedia(video);
             hls.on(Hls.Events.MANIFEST_PARSED, () => video.play().catch(()=>{}));
-          } else { video.src = rawUrl; video.play(); }
-        } else { video.src = rawUrl; video.play(); }
+            
+            // Si HLS falla, intentamos nativo como último recurso
+            hls.on(Hls.Events.ERROR, function (event, data) {
+                if (data.fatal) {
+                    console.log("HLS falló, intentando nativo...");
+                    hls.destroy(); hls = null;
+                    video.src = rawUrl; 
+                    video.play().catch(e => console.error(e));
+                }
+            });
+        } 
+        // INTENTO 2: Soporte Nativo (iOS / Safari o Archivos MP4 directos)
+        else if (video.canPlayType('application/vnd.apple.mpegurl') || isStaticFile) {
+            video.src = rawUrl;
+            video.play().catch(()=>{});
+        }
+        // INTENTO 3: Fallback final
+        else {
+             // Si llegamos aquí, es probable que no sea compatible, pero probamos nativo
+             // Esto es lo que causaba la descarga antes, pero ahora es el último recurso.
+             video.src = rawUrl;
+             video.play().catch(()=>{});
+        }
       }
     };
+    // -----------------------------------------------------
 
     window.addUrl = () => {
       const u = document.getElementById('urlIn');
@@ -190,45 +226,33 @@
       }
     };
 
-    // FUNCIONES DE EDICIÓN Y ELIMINACIÓN
     window.deleteChannel = (index, event) => {
-        event.stopPropagation(); // Evitar reproducir al hacer clic en borrar
+        event.stopPropagation();
         if(confirm(`¿Eliminar "${state.channels[index].title}"?`)) {
             const wasPlaying = (state.current === index);
             state.channels.splice(index, 1);
-            
-            // Ajustar el índice actual
             if(state.current > index) state.current--; 
             if(state.channels.length === 0) state.current = -1;
             
-            // Si borramos el que se veia, limpiamos pantalla
             if(wasPlaying) {
-                 video.src = ""; iframe.src = ""; state.current = -1;
+                 video.removeAttribute('src'); video.load(); iframe.src = ""; state.current = -1;
                  showFeedback("Eliminado");
-            } else if (state.current >= 0) {
-                 // Si borramos uno anterior, actualizamos el índice guardado
-                 state.current = state.current; 
-            }
-            
-            window.saveState();
-            render();
+            } 
+            window.saveState(); render();
         }
     };
 
     window.editChannel = (index, event) => {
-        event.stopPropagation(); // Evitar reproducir
+        event.stopPropagation();
         const ch = state.channels[index];
         const newTitle = prompt("Editar Nombre:", ch.title);
         if(newTitle === null) return;
-        
         const newUrl = prompt("Editar URL:", ch.url);
         if(newUrl === null) return;
 
         if(newTitle && newUrl) {
             state.channels[index] = { title: newTitle, url: newUrl };
-            window.saveState();
-            render();
-            // Si editamos el canal actual, lo recargamos
+            window.saveState(); render();
             if(state.current === index) {
                 showFeedback("Actualizado");
                 window.playUrl(newUrl, index);
@@ -295,7 +319,6 @@
       `).join('') || '<div style="padding:20px; text-align:center; color:#444">Lista vacía</div>';
     }
 
-    // CONTROL TÁCTIL (IZQ/DER) y CLIC
     const handleInteraction = (e) => {
         if (['INPUT','BUTTON'].includes(e.target.tagName) || e.target.closest('.channel-actions') || e.target.id === 'btn-exit-vr') return;
         
@@ -304,7 +327,6 @@
         const width = window.innerWidth;
         const height = window.innerHeight;
         
-        // Ajuste Ojos VR (Arriba/Abajo)
         if(document.body.classList.contains('is-vr')) {
             const yRatio = clientY / height;
             if (yRatio < 0.25) { 
@@ -314,8 +336,6 @@
                 state.eyeGap = Math.min(3.5, state.eyeGap - 0.1); updateEyeGapUI(); window.saveState(); return;
             }
         }
-
-        // Navegación Canales (Izquierda / Derecha)
         if ((clientX / width) > 0.5) window.playNext();
         else window.playPrev();
     };
