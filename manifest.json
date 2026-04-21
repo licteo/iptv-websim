@@ -1,0 +1,15 @@
+{
+  "name": "IPTV VR Master",
+  "short_name": "IPTV VR",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#051019",
+  "theme_color": "#00d4ff",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/716/716429.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
