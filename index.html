@@ -3,14 +3,13 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover" />
-  <title>IPTV VR Pro + M3U Universal</title>
-  <link rel="manifest" href="manifest.json">
+  <title>IPTV VR Pro - Universal Control</title>
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
 
   <style>
     :root{--bg:#051019;--accent:#00d4ff;--danger:#ff4444;--success:#39ff14;--warning:#ffbb00}
     *{box-sizing:border-box;font-family:sans-serif}
-    html,body{height:100%;margin:0;background:var(--bg);color:#e6eef6;overflow:hidden}
+    html,body{height:100%;margin:0;background:var(--bg);color:#e6eef6;overflow:hidden; touch-action: none; user-select: none;}
     
     .container{max-width:980px;margin:12px auto;padding:15px;transition:opacity 0.3s}
     body.is-vr .container { opacity:0; pointer-events:none; position:absolute; z-index:-1 }
@@ -21,38 +20,28 @@
     #urlIn { flex: 2; min-width: 140px; }
     
     button{border:none;padding:12px;border-radius:8px;font-weight:bold;cursor:pointer; color:#000; transition: 0.2s}
-    button:active{transform: scale(0.95)}
     .btn-load{background:var(--accent)}
     .btn-m3u{background:var(--warning)}
     .btn-file{background:var(--success)}
-    .btn-fs{background:#fff}
     .btn-vr{background:#ff00ff; color:#fff}
-    .btn-clear{background:#444; color:#fff; font-size:11px; padding:5px 10px}
+    .btn-clear{background:#444; color:#fff; font-size:11px}
 
     .channel-list{background:#071018;border-radius:10px;padding:5px;max-height:160px;overflow:auto;border:1px solid #16202a;margin-bottom:10px}
     .channel-item{padding:8px 12px; border-bottom:1px solid #16202a; cursor:pointer; display:flex; justify-content:space-between; align-items:center}
-    .channel-item:hover{background:#111b25}
     .channel-item.active{border-left:4px solid var(--accent); background:#111b25}
     
-    .channel-info { flex: 1; display:flex; flex-direction:column; overflow:hidden; }
-    .channel-name { font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .channel-url { font-size:10px; color:#666; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-
     #vr-layer { display:none; position:fixed; inset:0; z-index:9999; background:#000}
     body.is-vr #vr-layer { display:block }
     
-    /* Capa para detectar clics en VR */
-    #vr-click-surface { position:fixed; inset:0; z-index:10000; display:none; background: transparent; }
+    #vr-click-surface { position:fixed; inset:0; z-index:10000; display:none; background: transparent; cursor: ns-resize; }
     body.is-vr #vr-click-surface { display:block }
 
     #btn-exit-vr { position:fixed; top:15px; right:15px; z-index:10002; background:var(--danger); color:white; padding:12px 24px; border-radius:30px; font-weight:bold; border:2px solid white; cursor: pointer; }
-    #feedback{ position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:rgba(0,0,0,0.9); color:#fff; padding:15px 25px; border-radius:30px; display:none; z-index:10005; border:1px solid var(--accent); font-size: 20px; font-weight: bold; pointer-events:none; white-space: nowrap; }
+    #feedback{ position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:rgba(0,0,0,0.9); color:#fff; padding:15px 25px; border-radius:30px; display:none; z-index:10005; border:1px solid var(--accent); font-size: 20px; font-weight: bold; pointer-events:none; }
 
     .video-container{background:#000; border-radius:12px; position:relative; overflow:hidden; width:100%; height:320px; border:1px solid #22303a;}
     #fullPlayerArea { width:100%; height:100%; position:relative; background:#000; display:flex; align-items:center }
-    
     #videoPlayer, #webFrame { width:100%; height:100%; border:none; display:none; pointer-events: none; }
-    video { object-fit:contain }
   </style>
 
   <script type="importmap">{ "imports": { "hls.js": "https://esm.sh/hls.js@1.4.12" } }</script>
@@ -74,32 +63,30 @@
   </div>
 
   <div class="container">
-    <h1 style="text-align:center; color:var(--accent); margin:0 0 10px 0; font-size:22px">IPTV VR Pro + M3U</h1>
-    
+    <h1 style="text-align:center; color:var(--accent); font-size:22px">IPTV VR Pro</h1>
     <div class="input-section">
       <input id="nameIn" type="text" placeholder="Nombre..." />
       <input id="urlIn" type="text" placeholder="URL M3U8 o YouTube..." />
       <button onclick="window.addUrl()" class="btn-load">AÑADIR</button>
-      
-      <input type="file" id="fileIn" accept=".m3u,.m3u8" style="display:none" onchange="window.handleFile(this)" />
-      <button onclick="document.getElementById('fileIn').click()" class="btn-file">SUBIR M3U</button>
-      <button onclick="window.importM3U()" class="btn-m3u">URL LISTA</button>
+      <input type="file" id="fileIn" style="display:none" onchange="window.handleFile(this)" />
+      <button onclick="document.getElementById('fileIn').click()" class="btn-file">M3U ARCHIVO</button>
+      <button onclick="window.importM3U()" class="btn-m3u">M3U URL</button>
     </div>
 
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px">
-        <button onclick="window.toggleFS()" class="btn-fs">PANTALLA COMPLETA</button>
+    <div style="display:flex; justify-content:space-between; margin-bottom:8px">
+        <button onclick="window.toggleFS()">PANTALLA COMPLETA</button>
         <button onclick="window.toggleVR()" class="btn-vr">MODO VR</button>
         <button onclick="window.clearAll()" class="btn-clear">Limpiar Todo</button>
     </div>
 
     <div class="channel-list" id="list"></div>
 
-    <div class="video-container" id="mainVideoContainer">
+    <div class="video-container">
       <div id="fullPlayerArea">
-        <div id="click-overlay" style="position:absolute; inset:0; z-index:10"></div>
+        <div id="click-overlay" style="position:absolute; inset:0; z-index:10; cursor: pointer;"></div>
         <div id="feedback"></div>
-        <video id="videoPlayer" crossorigin="anonymous" playsinline webkit-playsinline></video>
-        <iframe id="webFrame" allow="autoplay; fullscreen; encrypted-media"></iframe>
+        <video id="videoPlayer" crossorigin="anonymous" playsinline></video>
+        <iframe id="webFrame"></iframe>
       </div>
     </div>
   </div>
@@ -107,61 +94,18 @@
   <script type="module">
     import Hls from "hls.js";
 
-    const STORAGE_KEY = 'iptv_master_v11_final';
-    const state = JSON.parse(localStorage.getItem(STORAGE_KEY)) || { channels: [], current: -1, eyeGap: 2.15 };
-    
+    const state = JSON.parse(localStorage.getItem('iptv_vr_v13')) || { channels: [], current: -1, eyeGap: 2.15 };
     const video = document.getElementById('videoPlayer');
     const iframe = document.getElementById('webFrame');
     const feedback = document.getElementById('feedback');
     let hls = null;
 
-    window.saveState = () => localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-
-    // --- PROCESADOR M3U ---
-    function processM3UContent(data) {
-        const lines = data.split('\n');
-        let count = 0;
-        for (let i = 0; i < lines.length; i++) {
-            if (lines[i].startsWith('#EXTINF:')) {
-                const info = lines[i];
-                const streamUrl = lines[i + 1]?.trim();
-                if (streamUrl && !streamUrl.startsWith('#')) {
-                    const nameMatch = info.match(/,(.*)$/);
-                    const name = nameMatch ? nameMatch[1] : "Canal " + (state.channels.length + 1);
-                    state.channels.push({ title: name.trim(), url: streamUrl });
-                    count++;
-                    i++; 
-                }
-            }
-        }
-        window.saveState();
-        render();
-        showFeedback(`${count} canales agregados`);
-    }
-
-    window.handleFile = (input) => {
-        const file = input.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (e) => processM3UContent(e.target.result);
-        reader.readAsText(file);
-    };
-
-    window.importM3U = async () => {
-        const url = prompt("Pega la URL de la lista .m3u:");
-        if (!url) return;
-        showFeedback("Cargando...");
-        try {
-            const response = await fetch(url);
-            const data = await response.text();
-            processM3UContent(data);
-        } catch (e) { alert("Error de CORS o Red."); }
-    };
+    window.saveState = () => localStorage.setItem('iptv_vr_v13', JSON.stringify(state));
 
     // --- REPRODUCCIÓN ---
     window.playUrl = async (rawUrl, index) => {
-      if(hls){ hls.destroy(); hls = null; }
-      video.pause(); video.removeAttribute('src'); video.load();
+      if(hls) { hls.destroy(); hls = null; }
+      video.pause(); video.src = "";
       iframe.src = "";
       state.current = index; window.saveState(); render();
 
@@ -169,41 +113,97 @@
         const ytID = rawUrl.match(/(?:youtu\.be\/|youtube\.com\/(?:v\/|u\/\w\/|embed\/|watch\?v=))([^#\&\?]*)/)?.[1];
         video.style.display = "none"; iframe.style.display = "block";
         iframe.src = `https://www.youtube.com/embed/${ytID}?autoplay=1`;
-        showFeedback("YouTube: " + state.channels[index].title);
       } else {
         iframe.style.display = "none"; video.style.display = "block";
         if (Hls.isSupported()) {
           hls = new Hls(); hls.loadSource(rawUrl); hls.attachMedia(video);
           hls.on(Hls.Events.MANIFEST_PARSED, () => video.play().catch(()=>{}));
-        } else {
-          video.src = rawUrl; video.play().catch(()=>{});
+        } else { video.src = rawUrl; video.play().catch(()=>{}); }
+      }
+      showFeedback(state.channels[index].title);
+    };
+
+    // --- LÓGICA HÍBRIDA (MOUSE + TOUCH) ---
+    let startY = 0, startX = 0, isDragging = false;
+
+    const pointerDown = (e) => {
+        isDragging = true;
+        startY = e.clientY || (e.touches ? e.touches[0].clientY : 0);
+        startX = e.clientX || (e.touches ? e.touches[0].clientX : 0);
+    };
+
+    const pointerUp = (e) => {
+        if (!isDragging) return;
+        const endY = e.clientY || (e.changedTouches ? e.changedTouches[0].clientY : 0);
+        const endX = e.clientX || (e.changedTouches ? e.changedTouches[0].clientX : 0);
+        const diffY = startY - endY;
+
+        // Si el movimiento vertical fue notable (calibrar)
+        if (Math.abs(diffY) > 30) {
+            const delta = diffY > 0 ? 0.08 : -0.08;
+            state.eyeGap = Math.max(1.0, Math.min(4.5, state.eyeGap + delta));
+            updateScreens();
+            showFeedback(`Enfoque: ${state.eyeGap.toFixed(2)}`);
+            window.saveState();
+        } 
+        // Si fue un clic/toque rápido (navegar)
+        else {
+            if (state.channels.length === 0) return;
+            if (startX > window.innerWidth / 2) {
+                state.current = (state.current + 1) % state.channels.length;
+            } else {
+                state.current = (state.current - 1 + state.channels.length) % state.channels.length;
+            }
+            window.playUrl(state.channels[state.current].url, state.current);
         }
-        showFeedback("Canal: " + state.channels[index].title);
+        isDragging = false;
+    };
+
+    function updateScreens() {
+        const L = document.getElementById('screenLeft'), R = document.getElementById('screenRight');
+        if (L && R) {
+            L.setAttribute('position', `-${state.eyeGap} 0 0`);
+            R.setAttribute('position', `${state.eyeGap} 0 0`);
+        }
+    }
+
+    // Registrar eventos para Mouse y Touch
+    [document.getElementById('click-overlay'), document.getElementById('vr-click-surface')].forEach(el => {
+        el.addEventListener('mousedown', pointerDown);
+        el.addEventListener('mouseup', pointerUp);
+        el.addEventListener('touchstart', pointerDown, {passive: true});
+        el.addEventListener('touchend', pointerUp, {passive: true});
+    });
+
+    // --- LISTA Y UTILIDADES ---
+    window.addUrl = () => {
+      const u = document.getElementById('urlIn'), n = document.getElementById('nameIn');
+      if(u.value.trim()){
+        state.channels.push({title: n.value.trim() || "Canal", url: u.value.trim()});
+        u.value = ""; n.value = ""; window.saveState(); render();
       }
     };
 
-    // --- CONTROLES Y VR ---
-    const handleNavClick = (e) => {
-        if (state.channels.length === 0) return;
-        const width = window.innerWidth;
-        if (e.clientX > width / 2) {
-            state.current = (state.current + 1) % state.channels.length;
-        } else {
-            state.current = (state.current - 1 + state.channels.length) % state.channels.length;
-        }
-        window.playUrl(state.channels[state.current].url, state.current);
+    window.handleFile = (input) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const lines = e.target.result.split('\n');
+            lines.forEach((line, i) => {
+                if (line.startsWith('#EXTINF:')) {
+                    const url = lines[i+1]?.trim();
+                    if(url && !url.startsWith('#')) state.channels.push({title: line.split(',')[1] || "Canal", url});
+                }
+            });
+            window.saveState(); render();
+        };
+        reader.readAsText(input.files[0]);
     };
-
-    document.getElementById('click-overlay').onclick = handleNavClick;
-    document.getElementById('vr-click-surface').onclick = handleNavClick;
 
     window.toggleVR = () => {
       document.body.classList.toggle('is-vr');
       if (document.body.classList.contains('is-vr')) {
           document.documentElement.requestFullscreen?.();
-          const left = document.getElementById('screenLeft'), right = document.getElementById('screenRight');
-          left.setAttribute('position', `-${state.eyeGap} 0 0`);
-          right.setAttribute('position', `${state.eyeGap} 0 0`);
+          updateScreens();
       }
     };
 
@@ -213,35 +213,24 @@
       else document.exitFullscreen();
     };
 
-    window.addUrl = () => {
-      const u = document.getElementById('urlIn'), n = document.getElementById('nameIn');
-      if(u.value.trim()){
-        state.channels.push({title: n.value.trim() || "Canal Manual", url: u.value.trim()});
-        u.value = ""; n.value = ""; window.saveState(); render();
-      }
-    };
-
     window.clearAll = () => { if(confirm("¿Borrar todo?")) { state.channels = []; state.current = -1; window.saveState(); render(); } };
 
     function showFeedback(txt) { 
-        feedback.textContent = txt; 
-        feedback.style.display = "block"; 
-        setTimeout(() => feedback.style.display = "none", 2000); 
+        feedback.textContent = txt; feedback.style.display = "block"; 
+        setTimeout(() => feedback.style.display = "none", 1500); 
     }
 
     function render() {
       const listDiv = document.getElementById('list');
       listDiv.innerHTML = state.channels.map((ch, i) => `
         <div class="channel-item ${state.current === i ? 'active' : ''}" onclick="window.playUrl('${ch.url}', ${i})">
-            <div class="channel-info"><div class="channel-name">${ch.title}</div><div class="channel-url">${ch.url.substring(0,35)}...</div></div>
-            <button class="btn-clear" onclick="event.stopPropagation(); state.channels.splice(${i}, 1); window.saveState(); render();">ELIMINAR</button>
-         </div>`).join('') || '<div style="padding:20px; text-align:center; color:#444">Lista vacía</div>';
+            <div><b>${ch.title}</b></div>
+            <button class="btn-clear" onclick="event.stopPropagation(); state.channels.splice(${i}, 1); window.saveState(); render();">X</button>
+         </div>`).join('') || '<div style="padding:15px; color:#666">No hay canales</div>';
     }
 
     document.getElementById('btn-exit-vr').onclick = window.toggleVR;
-
     render();
-    if(state.current >= 0 && state.channels[state.current]) window.playUrl(state.channels[state.current].url, state.current);
   </script>
 </body>
 </html>
