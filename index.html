@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover" />
-  <title>IPTV VR Pro + M3U Local</title>
+  <title>IPTV VR Pro + M3U Universal</title>
   <link rel="manifest" href="manifest.json">
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
 
@@ -38,28 +38,20 @@
     .channel-name { font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .channel-url { font-size:10px; color:#666; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 
-    .channel-actions { display:flex; gap:8px; margin-left:10px; }
-    .btn-icon { padding:6px 10px; border-radius:5px; font-size:14px; cursor:pointer }
-    .btn-del { background:var(--danger); color:#fff; }
-
     #vr-layer { display:none; position:fixed; inset:0; z-index:9999; background:#000}
     body.is-vr #vr-layer { display:block }
     
-    body.is-vr.is-youtube #webFrame {
-        display: block !important; position: fixed; width: 200%; height: 100%; left: -50%; z-index: 9997; pointer-events: none;
-    }
-    body.is-vr.is-youtube a-scene { opacity: 0.1; }
-
-    #vr-click-surface { position:fixed; inset:0; z-index:10000; display:none }
+    /* Capa para detectar clics en VR */
+    #vr-click-surface { position:fixed; inset:0; z-index:10000; display:none; background: transparent; }
     body.is-vr #vr-click-surface { display:block }
 
     #btn-exit-vr { position:fixed; top:15px; right:15px; z-index:10002; background:var(--danger); color:white; padding:12px 24px; border-radius:30px; font-weight:bold; border:2px solid white; cursor: pointer; }
-    #feedback{ position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:rgba(0,0,0,0.9); color:#fff; padding:15px 25px; border-radius:30px; display:none; z-index:10005; border:1px solid var(--accent); font-size: 20px; font-weight: bold; pointer-events:none }
+    #feedback{ position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:rgba(0,0,0,0.9); color:#fff; padding:15px 25px; border-radius:30px; display:none; z-index:10005; border:1px solid var(--accent); font-size: 20px; font-weight: bold; pointer-events:none; white-space: nowrap; }
 
     .video-container{background:#000; border-radius:12px; position:relative; overflow:hidden; width:100%; height:320px; border:1px solid #22303a;}
     #fullPlayerArea { width:100%; height:100%; position:relative; background:#000; display:flex; align-items:center }
     
-    #videoPlayer, #webFrame { width:100%; height:100%; border:none; display:none; }
+    #videoPlayer, #webFrame { width:100%; height:100%; border:none; display:none; pointer-events: none; }
     video { object-fit:contain }
   </style>
 
@@ -82,7 +74,7 @@
   </div>
 
   <div class="container">
-    <h1 style="text-align:center; color:var(--accent); margin:0 0 10px 0; font-size:22px">IPTV VR Pro + M3U Local</h1>
+    <h1 style="text-align:center; color:var(--accent); margin:0 0 10px 0; font-size:22px">IPTV VR Pro + M3U</h1>
     
     <div class="input-section">
       <input id="nameIn" type="text" placeholder="Nombre..." />
@@ -90,13 +82,12 @@
       <button onclick="window.addUrl()" class="btn-load">AÑADIR</button>
       
       <input type="file" id="fileIn" accept=".m3u,.m3u8" style="display:none" onchange="window.handleFile(this)" />
-      <button onclick="document.getElementById('fileIn').click()" class="btn-file">SUBIR .M3U8</button>
-      
-      <button onclick="window.importM3U()" class="btn-m3u">IMPORTAR URL</button>
+      <button onclick="document.getElementById('fileIn').click()" class="btn-file">SUBIR M3U</button>
+      <button onclick="window.importM3U()" class="btn-m3u">URL LISTA</button>
     </div>
 
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px">
-        <button onclick="window.toggleFS()" class="btn-fs">FULL SCREEN</button>
+        <button onclick="window.toggleFS()" class="btn-fs">PANTALLA COMPLETA</button>
         <button onclick="window.toggleVR()" class="btn-vr">MODO VR</button>
         <button onclick="window.clearAll()" class="btn-clear">Limpiar Todo</button>
     </div>
@@ -116,7 +107,7 @@
   <script type="module">
     import Hls from "hls.js";
 
-    const STORAGE_KEY = 'iptv_master_v8_local';
+    const STORAGE_KEY = 'iptv_master_v11_final';
     const state = JSON.parse(localStorage.getItem(STORAGE_KEY)) || { channels: [], current: -1, eyeGap: 2.15 };
     
     const video = document.getElementById('videoPlayer');
@@ -126,7 +117,7 @@
 
     window.saveState = () => localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 
-    // --- PROCESADOR UNIVERSAL M3U (TEXTO A LISTA) ---
+    // --- PROCESADOR M3U ---
     function processM3UContent(data) {
         const lines = data.split('\n');
         let count = 0;
@@ -148,7 +139,6 @@
         showFeedback(`${count} canales agregados`);
     }
 
-    // --- MANEJO DE ARCHIVO LOCAL ---
     window.handleFile = (input) => {
         const file = input.files[0];
         if (!file) return;
@@ -157,20 +147,18 @@
         reader.readAsText(file);
     };
 
-    // --- IMPORTAR DESDE URL ---
     window.importM3U = async () => {
-        const url = prompt("Pega la URL de tu lista .m3u o .m3u8:");
+        const url = prompt("Pega la URL de la lista .m3u:");
         if (!url) return;
         showFeedback("Cargando...");
         try {
             const response = await fetch(url);
             const data = await response.text();
             processM3UContent(data);
-        } catch (e) {
-            alert("Error de red o CORS. Prueba subiendo el archivo directamente.");
-        }
+        } catch (e) { alert("Error de CORS o Red."); }
     };
 
+    // --- REPRODUCCIÓN ---
     window.playUrl = async (rawUrl, index) => {
       if(hls){ hls.destroy(); hls = null; }
       video.pause(); video.removeAttribute('src'); video.load();
@@ -179,11 +167,10 @@
 
       if (rawUrl.includes('youtube.com') || rawUrl.includes('youtu.be')) {
         const ytID = rawUrl.match(/(?:youtu\.be\/|youtube\.com\/(?:v\/|u\/\w\/|embed\/|watch\?v=))([^#\&\?]*)/)?.[1];
-        document.body.classList.add('is-youtube');
         video.style.display = "none"; iframe.style.display = "block";
         iframe.src = `https://www.youtube.com/embed/${ytID}?autoplay=1`;
+        showFeedback("YouTube: " + state.channels[index].title);
       } else {
-        document.body.classList.remove('is-youtube');
         iframe.style.display = "none"; video.style.display = "block";
         if (Hls.isSupported()) {
           hls = new Hls(); hls.loadSource(rawUrl); hls.attachMedia(video);
@@ -191,16 +178,24 @@
         } else {
           video.src = rawUrl; video.play().catch(()=>{});
         }
+        showFeedback("Canal: " + state.channels[index].title);
       }
     };
 
-    window.addUrl = () => {
-      const u = document.getElementById('urlIn'), n = document.getElementById('nameIn');
-      if(u.value.trim()){
-        state.channels.push({title: n.value.trim() || "Canal Manual", url: u.value.trim()});
-        u.value = ""; n.value = ""; window.saveState(); render();
-      }
+    // --- CONTROLES Y VR ---
+    const handleNavClick = (e) => {
+        if (state.channels.length === 0) return;
+        const width = window.innerWidth;
+        if (e.clientX > width / 2) {
+            state.current = (state.current + 1) % state.channels.length;
+        } else {
+            state.current = (state.current - 1 + state.channels.length) % state.channels.length;
+        }
+        window.playUrl(state.channels[state.current].url, state.current);
     };
+
+    document.getElementById('click-overlay').onclick = handleNavClick;
+    document.getElementById('vr-click-surface').onclick = handleNavClick;
 
     window.toggleVR = () => {
       document.body.classList.toggle('is-vr');
@@ -218,41 +213,32 @@
       else document.exitFullscreen();
     };
 
+    window.addUrl = () => {
+      const u = document.getElementById('urlIn'), n = document.getElementById('nameIn');
+      if(u.value.trim()){
+        state.channels.push({title: n.value.trim() || "Canal Manual", url: u.value.trim()});
+        u.value = ""; n.value = ""; window.saveState(); render();
+      }
+    };
+
     window.clearAll = () => { if(confirm("¿Borrar todo?")) { state.channels = []; state.current = -1; window.saveState(); render(); } };
 
-    function showFeedback(txt) { feedback.textContent = txt; feedback.style.display = "block"; setTimeout(() => feedback.style.display = "none", 2000); }
+    function showFeedback(txt) { 
+        feedback.textContent = txt; 
+        feedback.style.display = "block"; 
+        setTimeout(() => feedback.style.display = "none", 2000); 
+    }
 
     function render() {
       const listDiv = document.getElementById('list');
       listDiv.innerHTML = state.channels.map((ch, i) => `
         <div class="channel-item ${state.current === i ? 'active' : ''}" onclick="window.playUrl('${ch.url}', ${i})">
-            <div class="channel-info"><div class="channel-name">${ch.title}</div><div class="channel-url">${ch.url.substring(0,40)}...</div></div>
-            <div class="channel-actions">
-                <button class="btn-icon btn-del" onclick="event.stopPropagation(); state.channels.splice(${i}, 1); window.saveState(); render();">🗑️</button>
-            </div>
+            <div class="channel-info"><div class="channel-name">${ch.title}</div><div class="channel-url">${ch.url.substring(0,35)}...</div></div>
+            <button class="btn-clear" onclick="event.stopPropagation(); state.channels.splice(${i}, 1); window.saveState(); render();">ELIMINAR</button>
          </div>`).join('') || '<div style="padding:20px; text-align:center; color:#444">Lista vacía</div>';
     }
 
-    document.getElementById('click-overlay').onclick = (e) => {
-        const width = window.innerWidth;
-        if (state.channels.length === 0) return;
-        if (e.clientX > width / 2) {
-            let next = (state.current + 1) % state.channels.length;
-            window.playUrl(state.channels[next].url, next);
-        } else {
-            let prev = (state.current - 1 + state.channels.length) % state.channels.length;
-            window.playUrl(state.channels[prev].url, prev);
-        }
-    };
-
     document.getElementById('btn-exit-vr').onclick = window.toggleVR;
-
-    // Registro de Service Worker
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW error', err));
-      });
-    }
 
     render();
     if(state.current >= 0 && state.channels[state.current]) window.playUrl(state.channels[state.current].url, state.current);

@@ -1,0 +1,119 @@
+#EXTM3U
+#EXTINF:-1,YouTube Live 1
+https://youtu.be/vuTY4FDAbpA
+#EXTINF:-1,3ABN Kids
+https://3abn.bozztv.com/3abn2/Kids_live/smil:Kids_live.smil/playlist.m3u8
+#EXTINF:-1,3ABN Latino
+https://3abn.bozztv.com/3abn2/Lat_live/smil:Lat_live.smil/playlist.m3u8
+#EXTINF:-1,Spirit TV
+https://cdnlive.myspirit.tv/LS-ATL-43240-2/index.m3u8
+#EXTINF:-1,TVS Retro
+https://cdn.streamhispanatv.net:3531/live/tvsretrogtlive.m3u8
+#EXTINF:-1,Retro Plus TV
+https://scl.edge.grupoz.cl/retroplustvuno/live/playlist.m3u8
+#EXTINF:-1,Canela TV International
+https://amg00658-amg00658c8-canelatv-international-7227.playouts.now.amagi.tv/playlist/amg00658-canelamediafast-cinemalt-canelatvinternational/playlist.m3u8
+#EXTINF:-1,Cine Accion
+https://stmv6.voxtvhd.com.br/cineaccion/cineaccion/playlist.m3u8
+#EXTINF:-1,RT UH 720
+https://run-rt-uh.otteravision.com/run/rt_uh/rt_uh_720.m3u8
+#EXTINF:-1,YouTube Live 2
+https://youtu.be/s1Ylmj87gXY
+#EXTINF:-1,RA ES 720
+https://run-ra-es.otteravision.com/run/ra_es/ra_es_720.m3u8
+#EXTINF:-1,RT ES 720p
+https://run-rt-es.otteravision.com/run/rt_es/rt_es_720p_high.m3u8
+#EXTINF:-1,Grjngo Peliculas
+https://amogonetworx-grjngo-2-eu.plex.wurl.tv/playlist.m3u8
+#EXTINF:-1,Plex Master
+https://d3rciv7av2te5a.cloudfront.net/v1/master/3fec3e5cac39a52b2132f9c66c83dae043dc17d4/prod-plex/master.m3u8?ads.xumo_channelId=88889309
+#EXTINF:-1,MyTime Spain
+https://appletree-mytimespain-rakuten.amagi.tv/playlist.m3u8
+#EXTINF:-1,CNN Fast
+https://amg00803-cnnfast-amg00803c3-lg-es-5477.playouts.now.amagi.tv/playlist1080p.m3u8
+#EXTINF:-1,RT Español
+https://rt-esp.rttv.com/live/rtesp/playlist_800Kb.m3u8
+#EXTINF:-1,DW Español
+https://dwamdstream104.akamaized.net/hls/live/2015530/dwstream104/index.m3u8
+#EXTINF:-1,CBS News NY
+https://www.cbsnews.com/common/video/cbsn-ny-prod.m3u8
+#EXTINF:-1,YouTube Live 3
+https://youtu.be/ZA6YS0CYoTA
+#EXTINF:-1,YouTube Live 4
+https://youtu.be/FV4Q9DryTG8
+#EXTINF:-1,Avivamiento HD
+https://s1.abntelevision.com/avivamientoabr/stream/avivamientohd/avivamientohd/playlist.m3u8
+#EXTINF:-1,Bendicion Channel
+https://s.emisoras.tv:8081/bendicionchannel/index.m3u8
+#EXTINF:-1,Vision Dorada
+https://movil.ejeserver.com/live/visiondorada.m3u8
+#EXTINF:-1,Teledorada HD
+https://movil.ejeserver.com/live/teledoradahd.m3u8
+#EXTINF:-1,Oracion con Son
+https://canal.mediaserver.com.co/live/oracionconson.m3u8
+#EXTINF:-1,Canica TV
+https://stmv4.voxtvhd.com.br/canicatv/canicatv/playlist.m3u8
+#EXTINF:-1,NTV Live
+https://mist01.homestream.fun/hls/ntvlive/0_1/index.m3u8
+#EXTINF:-1,La Morada TV
+https://movil.ejeserver.com/live/lamoradatv.m3u8
+#EXTINF:-1,Onda Stereo
+https://stmv4.voxtvhd.com.br/ondastereo/ondastereo/playlist.m3u8
+#EXTINF:-1,Rio TV
+https://cdn.amelbasoluciones.co:8081/riotv/index.fmp4.m3u8
+#EXTINF:-1,Telebolivar
+https://live20.bozztv.com/akamaissh101/ssh101/telebolivar/playlist.m3u8
+#EXTINF:-1,Tu Universo TV
+https://5bf8041cb3fed.streamlock.net/TUUNIVERSOTV/TUUNIVERSOTV/playlist.m3u8
+#EXTINF:-1,Austral TV
+https://stmv3.voxtvhd.com.br/australtv/australtv/playlist.m3u8
+#EXTINF:-1,GM7 Digital
+https://s2.tvdatta.com:3858/live/gm7digitallive.m3u8
+#EXTINF:-1,Latacunga TV
+https://stmv1.voxtvhd.com.br/latacungatv/latacungatv/playlist.m3u8
+#EXTINF:-1,TV3 Ecuador
+https://tv3ecuador.site/hls/stream/index.m3u8
+#EXTINF:-1,TV Cisne
+https://video2.lhdserver.es/tvcisne/live.m3u8
+#EXTINF:-1,Vos TV
+https://cloud37.ecuatel.com/vostv/live/manifest.m3u8
+#EXTINF:-1,France 24 Español
+https://a-cdn.klowdtv.com/live2/france24sp_720p/playlist.m3u8
+#EXTINF:-1,Viginet Venezuela
+https://e1.viginet.vectormax.com:5210/quickstart/114-934-21/index.m3u8
+#EXTINF:-1,Sono Onda TV (Ecuador)
+https://live.obslivestream.com/sonoondatv/index.m3u8
+#EXTINF:-1,Peru Live
+https://cdnhd.iblups.com/hls/902c1a0395264f269f1160efa00660e47.m3u8
+#EXTINF:-1,Atacama Noticias (Chile)
+https://v2.tustreaming.cl/atacamanoticias/index.m3u8
+#EXTINF:-1,PNT Chile
+https://pnt.janusmedia.tv/hls/pnt.m3u8
+#EXTINF:-1,CN247 (Argentina)
+https://panel.host-live.com:19360/cn247tv/cn247tv.m3u8
+#EXTINF:-1,Canal U (Uruguay)
+https://livedelta.cdn.antel.net.uy/out/u/url_canalu.m3u8
+#EXTINF:-1,4D Mas Noticias (Paraguay)
+https://rds3.desdeparaguay.net/4dmasnoticiastv/4dmasnoticiastv/playlist.m3u8
+#EXTINF:-1,800 TV (Paraguay)
+https://tigocloud.desdeparaguay.net/800tv/800tv/playlist.m3u8
+#EXTINF:-1,Zoy Plus (Bolivia)
+https://mio.zoymilton.com/ZoyPlus/index.m3u8
+#EXTINF:-1,Video News (Brasil)
+https://video01.logicahost.com.br/tvideonews/tvideonews/playlist.m3u8
+#EXTINF:-1,Euronews Español
+https://d35j504z0x2vu2.cloudfront.net/v1/master/0bc8e8376bd8417a1b6761138aa41c26c7309312/euronews-spa/euronews-es.m3u8?ads.vf=DLlKFAN37a8
+#EXTINF:-1,Impacto TV
+https://cloudvideo.servers10.com:8081/impactotv/index.m3u8
+#EXTINF:-1,Milenial News
+https://www.milenial.news/salida/milenial.m3u8
+#EXTINF:-1,TV Oriente
+https://live.obslivestream.com/tvoriente/index.m3u8
+#EXTINF:-1,Telecolor
+https://live.obslivestream.com/telecolormux/index.m3u8
+#EXTINF:-1,Unitel TV
+https://play.agenciastreaming.com:8081/uniteltv/index.m3u8
+#EXTINF:-1,Viva TV
+https://live.obslivestream.com/vivatv/index.m3u8
+#EXTINF:-1,Vepaco TV
+https://cloud.fastchannel.es/manifiest/hls/prog9/vepacotv.m3u8
