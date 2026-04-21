@@ -42,8 +42,15 @@
     .btn-icon { padding:6px 10px; border-radius:5px; font-size:14px; cursor:pointer }
     .btn-del { background:var(--danger); color:#fff; }
 
+    /* CAPAS VR */
     #vr-layer { display:none; position:fixed; inset:0; z-index:9999; background:#000}
     body.is-vr #vr-layer { display:block }
+
+    /* EL ATRAPA-CLICS: ESTO SOLUCIONA EL CAMBIO DE CANAL */
+    #vr-click-surface { 
+        position:fixed; inset:0; z-index:10001; display:none; background:transparent;
+    }
+    body.is-vr #vr-click-surface { display:block }
     
     body.is-vr.is-youtube #webFrame {
         display: block !important; position: fixed; width: 200%; height: 100%; left: -50%; z-index: 9997; pointer-events: none;
@@ -65,14 +72,14 @@
 <body>
 
   <div id="vr-layer">
+    <div id="vr-click-surface"></div>
+    
     <button id="btn-exit-vr">SALIR VR</button>
     <a-scene embedded loading-screen="enabled:false" vr-mode-ui="enabled:false">
       <a-entity camera look-controls position="0 1.6 0">
-        <a-entity cursor="rayOrigin: mouse" raycaster="objects: .clickable"></a-entity>
-        
         <a-entity id="vr-display-container" position="0 0 -3.6">
-          <a-video id="screenLeft" class="clickable" src="#videoPlayer" width="4.8" height="2.7" material="shader:flat"></a-video>
-          <a-video id="screenRight" class="clickable" src="#videoPlayer" width="4.8" height="2.7" material="shader:flat"></a-video>
+          <a-video id="screenLeft" src="#videoPlayer" width="4.8" height="2.7" material="shader:flat"></a-video>
+          <a-video id="screenRight" src="#videoPlayer" width="4.8" height="2.7" material="shader:flat"></a-video>
         </a-entity>
       </a-entity>
       <a-sky color="#000"></a-sky>
@@ -86,10 +93,8 @@
       <input id="nameIn" type="text" placeholder="Nombre..." />
       <input id="urlIn" type="text" placeholder="URL M3U8 o YouTube..." />
       <button onclick="window.addUrl()" class="btn-load">AÑADIR</button>
-      
       <input type="file" id="fileIn" accept=".m3u,.m3u8" style="display:none" onchange="window.handleFile(this)" />
       <button onclick="document.getElementById('fileIn').click()" class="btn-file">SUBIR .M3U8</button>
-      
       <button onclick="window.importM3U()" class="btn-m3u">IMPORTAR URL</button>
     </div>
 
@@ -114,7 +119,7 @@
   <script type="module">
     import Hls from "hls.js";
 
-    const STORAGE_KEY = 'iptv_master_v9_vr_fix';
+    const STORAGE_KEY = 'iptv_master_v10_final';
     const state = JSON.parse(localStorage.getItem(STORAGE_KEY)) || { channels: [], current: -1, eyeGap: 2.15 };
     
     const video = document.getElementById('videoPlayer');
@@ -244,24 +249,20 @@
          </div>`).join('') || '<div style="padding:20px; text-align:center; color:#444">Lista vacía</div>';
     }
 
-    // --- EVENTOS DE CLICK (NORMAL Y VR) ---
-    document.getElementById('click-overlay').onclick = (e) => {
-        if (e.clientX > window.innerWidth / 2) window.nextChannel();
+    // --- MANEJO DE CLICS MAESTRO ---
+    const handleUniversalClick = (e) => {
+        const width = window.innerWidth;
+        if (e.clientX > width / 2) window.nextChannel();
         else window.prevChannel();
     };
 
-    // Escuchar clics dentro de la escena VR (A-Frame)
-    document.querySelectorAll('.clickable').forEach(el => {
-        el.addEventListener('click', () => window.nextChannel());
-    });
+    // Aplicar a la capa normal
+    document.getElementById('click-overlay').onclick = handleUniversalClick;
+
+    // Aplicar a la capa VR (Atrapa-clics)
+    document.getElementById('vr-click-surface').onclick = handleUniversalClick;
 
     document.getElementById('btn-exit-vr').onclick = window.toggleVR;
-
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW error', err));
-      });
-    }
 
     render();
     if(state.current >= 0 && state.channels[state.current]) window.playUrl(state.channels[state.current].url, state.current);
