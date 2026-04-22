@@ -14,13 +14,28 @@
     :root{--bg:#051019;--accent:#00d4ff;--danger:#ff4444;--success:#39ff14;--warning:#ffbb00}
     *{box-sizing:border-box;font-family:sans-serif}
     
-    /* CAMBIO: Permitimos scroll en el body para que no se pierda el reproductor */
-    html,body{ margin:0; background:var(--bg); color:#e6eef6; min-height:100vh; overflow-y: auto; overflow-x: hidden; touch-action: pan-y; }
+    /* Forzamos que el body permita scroll siempre en modo normal */
+    html, body { 
+      margin:0; 
+      background:var(--bg); 
+      color:#e6eef6; 
+      height: 100%;
+      overflow-y: auto !important; /* Forzar scroll vertical */
+      -webkit-overflow-scrolling: touch;
+    }
     
-    /* En modo VR sí bloqueamos el scroll */
-    body.is-vr { overflow: hidden; touch-action: none; }
+    /* Solo bloqueamos scroll cuando el VR está activo */
+    body.is-vr { overflow: hidden !important; touch-action: none; }
 
-    .container{max-width:980px; margin:0 auto; padding:15px; padding-bottom: 50px;}
+    .container { 
+      max-width:980px; 
+      margin:0 auto; 
+      padding:15px; 
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+    
     body.is-vr .container { display: none; }
     
     .input-section{display:flex; gap:8px; margin:8px 0; flex-wrap:wrap}
@@ -33,9 +48,19 @@
     .btn-m3u{background:var(--warning)}
     .btn-file{background:var(--success)}
     .btn-vr{background:#ff00ff; color:#fff}
-    .btn-clear{background:#444; color:#fff; font-size:11px}
 
-    .channel-list{background:#071018; border-radius:10px; padding:5px; max-height:250px; overflow-y:auto; border:1px solid #16202a; margin-bottom:15px}
+    /* MEJORA: Lista con scroll interno garantizado */
+    .channel-list {
+      background:#071018; 
+      border-radius:10px; 
+      padding:5px; 
+      height: 200px; /* Altura fija para que el scroll funcione sí o sí */
+      overflow-y: scroll !important; 
+      border:1px solid #16202a; 
+      margin-bottom:15px;
+      -webkit-overflow-scrolling: touch;
+    }
+    
     .channel-item{padding:12px; border-bottom:1px solid #16202a; cursor:pointer; display:flex; justify-content:space-between; align-items:center}
     .channel-item.active{border-left:4px solid var(--accent); background:#111b25}
     
@@ -43,16 +68,13 @@
     body.is-vr #vr-layer { display:block }
     
     #vr-divider { position: fixed; left: 50%; top: 0; bottom: 0; width: 2px; background: rgba(255, 255, 255, 0.2); z-index: 10001; transform: translateX(-50%); }
-
     #vr-click-surface { position:fixed; inset:0; z-index:10000; display:none; background: transparent; }
     body.is-vr #vr-click-surface { display:block }
 
     #btn-exit-vr { position:fixed; top:15px; right:15px; z-index:10002; background:var(--danger); color:white; padding:12px 24px; border-radius:30px; font-weight:bold; border:2px solid white; }
-    
     #feedback{ position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:rgba(0,0,0,0.9); color:#fff; padding:15px 25px; border-radius:30px; display:none; z-index:10005; border:1px solid var(--accent); font-size: 20px; font-weight: bold; pointer-events:none; }
 
-    /* Ajuste de tamaño del video en modo normal */
-    .video-container{ background:#000; border-radius:12px; position:relative; overflow:hidden; width:100%; aspect-ratio: 16 / 9; border:1px solid #22303a; margin-top: 10px; }
+    .video-container{ background:#000; border-radius:12px; position:relative; overflow:hidden; width:100%; aspect-ratio: 16 / 9; border:1px solid #22303a; margin-top: auto; }
     #fullPlayerArea { width:100%; height:100%; position:relative; display:flex; align-items:center }
     #videoPlayer, #webFrame { width:100%; height:100%; border:none; display:none; }
   </style>
@@ -77,21 +99,20 @@
   </div>
 
   <div class="container">
-    <h1 style="text-align:center; color:var(--accent); font-size:22px; margin-top:10px">IPTV VR Pro</h1>
+    <h1 style="text-align:center; color:var(--accent); font-size:22px;">IPTV VR Pro</h1>
     
     <div class="input-section">
       <input id="nameIn" type="text" placeholder="Nombre..." />
-      <input id="urlIn" type="text" placeholder="URL M3U8 o YouTube..." />
+      <input id="urlIn" type="text" placeholder="URL M3U8..." />
       <button onclick="window.addUrl()" class="btn-load">AÑADIR</button>
       <input type="file" id="fileIn" style="display:none" onchange="window.handleFile(this)" />
       <button onclick="document.getElementById('fileIn').click()" class="btn-file">M3U ARCHIVO</button>
-      <button onclick="window.importM3U()" class="btn-m3u">M3U URL</button>
     </div>
 
     <div style="display:flex; justify-content:space-between; margin: 10px 0;">
         <button onclick="window.toggleFS()">FULLSCREEN</button>
         <button onclick="window.toggleVR()" class="btn-vr">MODO VR</button>
-        <button onclick="window.clearAll()" class="btn-clear">Limpiar Todo</button>
+        <button onclick="window.clearAll()" style="background:#444; color:#fff; font-size:11px">Limpiar</button>
     </div>
 
     <div class="channel-list" id="list"></div>
@@ -136,7 +157,7 @@
       showFeedback(state.channels[index].title);
     };
 
-    // --- LÓGICA DE CONTROL (IZQ: ATRÁS | CEN: PAUSA | DER: SIGUIENTE) ---
+    // --- CONTROLES (IZQ | CEN | DER) ---
     let startY = 0, startX = 0, isDragging = false;
 
     const pointerDown = (e) => {
@@ -215,24 +236,6 @@
       }
     };
 
-    window.importM3U = async () => {
-        const url = prompt("URL M3U:");
-        if (url) {
-            try {
-                const res = await fetch(url);
-                const text = await res.text();
-                const lines = text.split('\n');
-                lines.forEach((line, i) => {
-                    if (line.startsWith('#EXTINF:')) {
-                        const nextLine = lines[i+1]?.trim();
-                        if(nextLine && !nextLine.startsWith('#')) state.channels.push({title: line.split(',')[1] || "Canal", url: nextLine});
-                    }
-                });
-                window.saveState(); render();
-            } catch(e) { alert("Error al cargar URL."); }
-        }
-    };
-
     window.toggleVR = () => {
       document.body.classList.toggle('is-vr');
       if (document.body.classList.contains('is-vr')) {
@@ -261,8 +264,8 @@
       listDiv.innerHTML = state.channels.map((ch, i) => `
         <div class="channel-item ${state.current === i ? 'active' : ''}" onclick="window.playUrl('${ch.url}', ${i})">
             <div><b>${ch.title}</b></div>
-            <button class="btn-clear" onclick="event.stopPropagation(); state.channels.splice(${i}, 1); window.saveState(); render();">X</button>
-         </div>`).join('') || '<div style="padding:15px; color:#666">No hay canales</div>';
+            <button style="background:#444; color:#fff; padding:5px 10px;" onclick="event.stopPropagation(); state.channels.splice(${i}, 1); window.saveState(); render();">X</button>
+         </div>`).join('') || '<div style="padding:15px; color:#666">Carga una lista...</div>';
     }
 
     render();
