@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover" />
-  <title>IPTV VR Pro</title>
+  <title>IPTV VR Pro - Fixed Scroll</title>
   
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -14,26 +14,25 @@
     :root{--bg:#051019;--accent:#00d4ff;--danger:#ff4444;--success:#39ff14;--warning:#ffbb00}
     *{box-sizing:border-box;font-family:sans-serif}
     
-    /* Forzamos que el body permita scroll siempre en modo normal */
+    /* RESET CRÍTICO PARA GITHUB PAGES */
     html, body { 
-      margin:0; 
+      margin:0; padding:0; 
       background:var(--bg); 
       color:#e6eef6; 
-      height: 100%;
-      overflow-y: auto !important; /* Forzar scroll vertical */
-      -webkit-overflow-scrolling: touch;
+      height: 100%; 
+      overflow: hidden; /* El body no hace scroll, lo hace el container */
     }
     
-    /* Solo bloqueamos scroll cuando el VR está activo */
-    body.is-vr { overflow: hidden !important; touch-action: none; }
-
+    /* El contenedor principal SI tiene scroll */
     .container { 
+      height: 100%;
+      overflow-y: auto !important;
+      -webkit-overflow-scrolling: touch;
       max-width:980px; 
       margin:0 auto; 
-      padding:15px; 
+      padding:15px;
       display: flex;
       flex-direction: column;
-      min-height: 100vh;
     }
     
     body.is-vr .container { display: none; }
@@ -45,36 +44,37 @@
     
     button{border:none; padding:12px; border-radius:8px; font-weight:bold; cursor:pointer; color:#000; transition: 0.2s}
     .btn-load{background:var(--accent)}
-    .btn-m3u{background:var(--warning)}
     .btn-file{background:var(--success)}
     .btn-vr{background:#ff00ff; color:#fff}
 
-    /* MEJORA: Lista con scroll interno garantizado */
+    /* Lista con scroll interno */
     .channel-list {
       background:#071018; 
       border-radius:10px; 
       padding:5px; 
-      height: 200px; /* Altura fija para que el scroll funcione sí o sí */
-      overflow-y: scroll !important; 
+      min-height: 150px;
+      max-height: 250px;
+      overflow-y: auto; 
       border:1px solid #16202a; 
       margin-bottom:15px;
-      -webkit-overflow-scrolling: touch;
     }
     
     .channel-item{padding:12px; border-bottom:1px solid #16202a; cursor:pointer; display:flex; justify-content:space-between; align-items:center}
     .channel-item.active{border-left:4px solid var(--accent); background:#111b25}
     
+    /* CAPA VR */
     #vr-layer { display:none; position:fixed; inset:0; z-index:9999; background:#000}
     body.is-vr #vr-layer { display:block }
     
-    #vr-divider { position: fixed; left: 50%; top: 0; bottom: 0; width: 2px; background: rgba(255, 255, 255, 0.2); z-index: 10001; transform: translateX(-50%); }
+    #vr-divider { position: fixed; left: 50%; top: 0; bottom: 0; width: 2px; background: rgba(255, 255, 255, 0.3); z-index: 10001; transform: translateX(-50%); }
     #vr-click-surface { position:fixed; inset:0; z-index:10000; display:none; background: transparent; }
     body.is-vr #vr-click-surface { display:block }
 
-    #btn-exit-vr { position:fixed; top:15px; right:15px; z-index:10002; background:var(--danger); color:white; padding:12px 24px; border-radius:30px; font-weight:bold; border:2px solid white; }
+    #btn-exit-vr { position:fixed; top:20px; right:20px; z-index:10002; background:var(--danger); color:white; padding:15px 25px; border-radius:30px; font-weight:bold; border:2px solid white; }
     #feedback{ position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:rgba(0,0,0,0.9); color:#fff; padding:15px 25px; border-radius:30px; display:none; z-index:10005; border:1px solid var(--accent); font-size: 20px; font-weight: bold; pointer-events:none; }
 
-    .video-container{ background:#000; border-radius:12px; position:relative; overflow:hidden; width:100%; aspect-ratio: 16 / 9; border:1px solid #22303a; margin-top: auto; }
+    /* REPRODUCTOR */
+    .video-container{ background:#000; border-radius:12px; position:relative; overflow:hidden; width:100%; aspect-ratio: 16 / 9; border:1px solid #22303a; margin-top: 10px; margin-bottom: 30px; }
     #fullPlayerArea { width:100%; height:100%; position:relative; display:flex; align-items:center }
     #videoPlayer, #webFrame { width:100%; height:100%; border:none; display:none; }
   </style>
@@ -88,7 +88,7 @@
     <div id="vr-click-surface"></div>
     <button id="btn-exit-vr" onclick="window.toggleVR()">SALIR VR</button>
     <a-scene embedded loading-screen="enabled:false" vr-mode-ui="enabled:false">
-      <a-entity camera look-controls position="0 1.6 0">
+      <a-entity camera look-controls="enabled: false" position="0 1.6 0">
         <a-entity id="vr-display-container" position="0 0 -3.6">
           <a-video id="screenLeft" src="#videoPlayer" width="4.8" height="2.7" material="shader:flat"></a-video>
           <a-video id="screenRight" src="#videoPlayer" width="4.8" height="2.7" material="shader:flat"></a-video>
@@ -110,7 +110,7 @@
     </div>
 
     <div style="display:flex; justify-content:space-between; margin: 10px 0;">
-        <button onclick="window.toggleFS()">FULLSCREEN</button>
+        <button onclick="window.toggleFS()" style="background:#eee">FULLSCREEN</button>
         <button onclick="window.toggleVR()" class="btn-vr">MODO VR</button>
         <button onclick="window.clearAll()" style="background:#444; color:#fff; font-size:11px">Limpiar</button>
     </div>
@@ -157,7 +157,7 @@
       showFeedback(state.channels[index].title);
     };
 
-    // --- CONTROLES (IZQ | CEN | DER) ---
+    // --- CONTROLES ADELANTE/ATRÁS/PAUSA ---
     let startY = 0, startX = 0, isDragging = false;
 
     const pointerDown = (e) => {
@@ -169,18 +169,20 @@
     const pointerUp = (e) => {
         if (!isDragging) return;
         const endY = e.clientY || (e.changedTouches ? e.changedTouches[0].clientY : 0);
-        const endX = e.clientX || (e.changedTouches ? e.changedTouches[0].clientX : 0);
-        const diffY = startY - endY;
         const width = window.innerWidth;
         const xPosPercent = (startX / width) * 100;
+        const diffY = startY - endY;
 
-        if (Math.abs(diffY) > 50) {
+        // Si es un movimiento vertical largo: Calibración VR
+        if (Math.abs(diffY) > 60) {
             const delta = diffY > 0 ? 0.08 : -0.08;
             state.eyeGap = Math.max(1.0, Math.min(4.5, state.eyeGap + delta));
             updateScreens();
-            showFeedback(`Calibración: ${state.eyeGap.toFixed(2)}`);
+            showFeedback(`Calib: ${state.eyeGap.toFixed(2)}`);
             window.saveState();
-        } else if (Math.abs(startY - endY) < 10) {
+        } 
+        // Si es un toque corto: Control de canales
+        else if (Math.abs(diffY) < 15) {
             if (state.channels.length === 0) return;
             if (xPosPercent < 30) {
                 state.current = (state.current - 1 + state.channels.length) % state.channels.length;
@@ -237,12 +239,15 @@
     };
 
     window.toggleVR = () => {
-      document.body.classList.toggle('is-vr');
-      if (document.body.classList.contains('is-vr')) {
+      const isVR = document.body.classList.toggle('is-vr');
+      const scene = document.querySelector('a-scene');
+      if (isVR) {
           document.documentElement.requestFullscreen?.().catch(()=>{});
+          if(scene) scene.play();
           updateScreens();
       } else {
           if(document.fullscreenElement) document.exitFullscreen();
+          if(scene) scene.pause();
       }
     };
 
@@ -256,7 +261,7 @@
 
     function showFeedback(txt) { 
         feedback.textContent = txt; feedback.style.display = "block"; 
-        setTimeout(() => feedback.style.display = "none", 1500); 
+        setTimeout(() => feedback.style.display = "none", 1200); 
     }
 
     function render() {
@@ -265,10 +270,14 @@
         <div class="channel-item ${state.current === i ? 'active' : ''}" onclick="window.playUrl('${ch.url}', ${i})">
             <div><b>${ch.title}</b></div>
             <button style="background:#444; color:#fff; padding:5px 10px;" onclick="event.stopPropagation(); state.channels.splice(${i}, 1); window.saveState(); render();">X</button>
-         </div>`).join('') || '<div style="padding:15px; color:#666">Carga una lista...</div>';
+         </div>`).join('') || '<div style="padding:15px; color:#666">Carga una lista M3U...</div>';
     }
 
     render();
+    // Pausamos A-Frame al inicio para que no robe el scroll
+    document.querySelector('a-scene').addEventListener('loaded', function () {
+        this.pause();
+    });
   </script>
 </body>
 </html>
