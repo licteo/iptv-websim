@@ -3,7 +3,12 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover" />
-  <title>IPTV VR Pro - Universal Control</title>
+  <title>IPTV VR Pro</title>
+  
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <link rel="manifest" href="manifest.json">
+  
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
 
   <style>
@@ -33,6 +38,20 @@
     #vr-layer { display:none; position:fixed; inset:0; z-index:9999; background:#000}
     body.is-vr #vr-layer { display:block }
     
+    /* Línea divisoria central */
+    #vr-divider {
+      position: fixed;
+      left: 50%;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: rgba(255, 255, 255, 0.2);
+      z-index: 10001;
+      transform: translateX(-50%);
+      display: none;
+    }
+    body.is-vr #vr-divider { display: block; }
+
     #vr-click-surface { position:fixed; inset:0; z-index:10000; display:none; background: transparent; cursor: ns-resize; }
     body.is-vr #vr-click-surface { display:block }
 
@@ -49,6 +68,7 @@
 <body>
 
   <div id="vr-layer">
+    <div id="vr-divider"></div>
     <div id="vr-click-surface"></div>
     <button id="btn-exit-vr">SALIR VR</button>
     <a-scene embedded loading-screen="enabled:false" vr-mode-ui="enabled:false">
@@ -74,7 +94,7 @@
     </div>
 
     <div style="display:flex; justify-content:space-between; margin-bottom:8px">
-        <button onclick="window.toggleFS()">PANTALLA COMPLETA</button>
+        <button onclick="window.toggleFS()">FULLSCREEN</button>
         <button onclick="window.toggleVR()" class="btn-vr">MODO VR</button>
         <button onclick="window.clearAll()" class="btn-clear">Limpiar Todo</button>
     </div>
@@ -94,13 +114,18 @@
   <script type="module">
     import Hls from "hls.js";
 
-    const state = JSON.parse(localStorage.getItem('iptv_vr_v13')) || { channels: [], current: -1, eyeGap: 2.15 };
+    // Registro de Service Worker para que sea instalable
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js').catch(() => {});
+    }
+
+    const state = JSON.parse(localStorage.getItem('iptv_vr_final')) || { channels: [], current: -1, eyeGap: 2.15 };
     const video = document.getElementById('videoPlayer');
     const iframe = document.getElementById('webFrame');
     const feedback = document.getElementById('feedback');
     let hls = null;
 
-    window.saveState = () => localStorage.setItem('iptv_vr_v13', JSON.stringify(state));
+    window.saveState = () => localStorage.setItem('iptv_vr_final', JSON.stringify(state));
 
     // --- REPRODUCCIÓN ---
     window.playUrl = async (rawUrl, index) => {
@@ -138,16 +163,13 @@
         const endX = e.clientX || (e.changedTouches ? e.changedTouches[0].clientX : 0);
         const diffY = startY - endY;
 
-        // Si el movimiento vertical fue notable (calibrar)
         if (Math.abs(diffY) > 30) {
             const delta = diffY > 0 ? 0.08 : -0.08;
             state.eyeGap = Math.max(1.0, Math.min(4.5, state.eyeGap + delta));
             updateScreens();
-            showFeedback(`Enfoque: ${state.eyeGap.toFixed(2)}`);
+            showFeedback(`Calibración: ${state.eyeGap.toFixed(2)}`);
             window.saveState();
-        } 
-        // Si fue un clic/toque rápido (navegar)
-        else {
+        } else {
             if (state.channels.length === 0) return;
             if (startX > window.innerWidth / 2) {
                 state.current = (state.current + 1) % state.channels.length;
@@ -167,7 +189,6 @@
         }
     }
 
-    // Registrar eventos para Mouse y Touch
     [document.getElementById('click-overlay'), document.getElementById('vr-click-surface')].forEach(el => {
         el.addEventListener('mousedown', pointerDown);
         el.addEventListener('mouseup', pointerUp);
