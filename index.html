@@ -59,9 +59,9 @@
     <button id="btn-exit-vr" onclick="window.toggleVR()">SALIR VR</button>
     <a-scene embedded loading-screen="enabled:false" vr-mode-ui="enabled:false">
       <a-entity camera look-controls="enabled: false" position="0 1.6 0">
-        <a-entity id="vr-display-container" position="0 0 -4.0">
-          <a-video id="screenLeft" src="#videoPlayer" width="3.8" height="2.13" material="shader:flat"></a-video>
-          <a-video id="screenRight" src="#videoPlayer" width="3.8" height="2.13" material="shader:flat"></a-video>
+        <a-entity id="vr-display-container" position="0 0 -3.6">
+          <a-video id="screenLeft" src="#videoPlayer" width="4.4" height="2.47" material="shader:flat"></a-video>
+          <a-video id="screenRight" src="#videoPlayer" width="4.4" height="2.47" material="shader:flat"></a-video>
         </a-entity>
       </a-entity>
       <a-sky color="#000"></a-sky>
@@ -98,14 +98,11 @@
 
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js')
-          .then(reg => console.log('SW registrado', reg))
-          .catch(err => console.log('Error SW', err));
+        navigator.serviceWorker.register('./sw.js').catch(err => console.log('Error SW', err));
       });
     }
 
-    // Mejora 3: Valor inicial 1.90 para tu IPD específico
-    const state = JSON.parse(localStorage.getItem('iptv_vr_final')) || { channels: [], current: -1, eyeGap: 1.90 };
+    const state = JSON.parse(localStorage.getItem('iptv_vr_final')) || { channels: [], current: -1, eyeGap: 1.95 };
     const video = document.getElementById('videoPlayer');
     const iframe = document.getElementById('webFrame');
     const feedback = document.getElementById('feedback');
@@ -149,8 +146,7 @@
 
         if (Math.abs(diffY) > 60) {
             const delta = diffY > 0 ? 0.08 : -0.08;
-            // Limitamos el rango para que no se deforme demasiado
-            state.eyeGap = Math.max(1.50, Math.min(3.00, state.eyeGap + delta));
+            state.eyeGap = Math.max(1.50, Math.min(2.80, state.eyeGap + delta));
             updateScreens();
             showFeedback(`Calibrar: ${state.eyeGap.toFixed(2)}`);
             window.saveState();
@@ -172,15 +168,16 @@
         isDragging = false;
     };
 
-    // Mejora 4: Función de actualización con escala bloqueada
     function updateScreens() {
         const L = document.getElementById('screenLeft'), R = document.getElementById('screenRight');
         if (L && R) {
             L.setAttribute('position', `-${state.eyeGap} 0 0`);
             R.setAttribute('position', `${state.eyeGap} 0 0`);
-            // Mantenemos el tamaño fijo para evitar el efecto de "crecimiento"
-            L.setAttribute('width', '3.8');
-            R.setAttribute('width', '3.8');
+            // Mantenemos el estándar de ancho 4.4
+            L.setAttribute('width', '4.4');
+            R.setAttribute('width', '4.4');
+            L.setAttribute('height', '2.47');
+            R.setAttribute('height', '2.47');
         }
     }
 
