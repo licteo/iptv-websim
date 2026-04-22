@@ -7,60 +7,54 @@
   
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <link rel="manifest" href="manifest.json">
   
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
 
   <style>
     :root{--bg:#051019;--accent:#00d4ff;--danger:#ff4444;--success:#39ff14;--warning:#ffbb00}
     *{box-sizing:border-box;font-family:sans-serif}
-    html,body{height:100%;margin:0;background:var(--bg);color:#e6eef6;overflow:hidden; touch-action: none; user-select: none;}
     
-    .container{max-width:980px;margin:12px auto;padding:15px;transition:opacity 0.3s}
-    body.is-vr .container { opacity:0; pointer-events:none; position:absolute; z-index:-1 }
+    /* CAMBIO: Permitimos scroll en el body para que no se pierda el reproductor */
+    html,body{ margin:0; background:var(--bg); color:#e6eef6; min-height:100vh; overflow-y: auto; overflow-x: hidden; touch-action: pan-y; }
     
-    .input-section{display:flex;gap:8px;margin:8px 0;flex-wrap:wrap}
-    input{padding:12px;border-radius:8px;border:1px solid #22303a;background:#0b1115;color:#fff;font-size:16px}
+    /* En modo VR sí bloqueamos el scroll */
+    body.is-vr { overflow: hidden; touch-action: none; }
+
+    .container{max-width:980px; margin:0 auto; padding:15px; padding-bottom: 50px;}
+    body.is-vr .container { display: none; }
+    
+    .input-section{display:flex; gap:8px; margin:8px 0; flex-wrap:wrap}
+    input{padding:12px; border-radius:8px; border:1px solid #22303a; background:#0b1115; color:#fff; font-size:16px}
     #nameIn { flex: 1; min-width: 90px; }
     #urlIn { flex: 2; min-width: 140px; }
     
-    button{border:none;padding:12px;border-radius:8px;font-weight:bold;cursor:pointer; color:#000; transition: 0.2s}
+    button{border:none; padding:12px; border-radius:8px; font-weight:bold; cursor:pointer; color:#000; transition: 0.2s}
     .btn-load{background:var(--accent)}
     .btn-m3u{background:var(--warning)}
     .btn-file{background:var(--success)}
     .btn-vr{background:#ff00ff; color:#fff}
     .btn-clear{background:#444; color:#fff; font-size:11px}
 
-    .channel-list{background:#071018;border-radius:10px;padding:5px;max-height:160px;overflow:auto;border:1px solid #16202a;margin-bottom:10px}
-    .channel-item{padding:8px 12px; border-bottom:1px solid #16202a; cursor:pointer; display:flex; justify-content:space-between; align-items:center}
+    .channel-list{background:#071018; border-radius:10px; padding:5px; max-height:250px; overflow-y:auto; border:1px solid #16202a; margin-bottom:15px}
+    .channel-item{padding:12px; border-bottom:1px solid #16202a; cursor:pointer; display:flex; justify-content:space-between; align-items:center}
     .channel-item.active{border-left:4px solid var(--accent); background:#111b25}
     
     #vr-layer { display:none; position:fixed; inset:0; z-index:9999; background:#000}
     body.is-vr #vr-layer { display:block }
     
-    /* Línea divisoria central */
-    #vr-divider {
-      position: fixed;
-      left: 50%;
-      top: 0;
-      bottom: 0;
-      width: 2px;
-      background: rgba(255, 255, 255, 0.2);
-      z-index: 10001;
-      transform: translateX(-50%);
-      display: none;
-    }
-    body.is-vr #vr-divider { display: block; }
+    #vr-divider { position: fixed; left: 50%; top: 0; bottom: 0; width: 2px; background: rgba(255, 255, 255, 0.2); z-index: 10001; transform: translateX(-50%); }
 
-    #vr-click-surface { position:fixed; inset:0; z-index:10000; display:none; background: transparent; cursor: ns-resize; }
+    #vr-click-surface { position:fixed; inset:0; z-index:10000; display:none; background: transparent; }
     body.is-vr #vr-click-surface { display:block }
 
-    #btn-exit-vr { position:fixed; top:15px; right:15px; z-index:10002; background:var(--danger); color:white; padding:12px 24px; border-radius:30px; font-weight:bold; border:2px solid white; cursor: pointer; }
+    #btn-exit-vr { position:fixed; top:15px; right:15px; z-index:10002; background:var(--danger); color:white; padding:12px 24px; border-radius:30px; font-weight:bold; border:2px solid white; }
+    
     #feedback{ position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:rgba(0,0,0,0.9); color:#fff; padding:15px 25px; border-radius:30px; display:none; z-index:10005; border:1px solid var(--accent); font-size: 20px; font-weight: bold; pointer-events:none; }
 
-    .video-container{background:#000; border-radius:12px; position:relative; overflow:hidden; width:100%; height:320px; border:1px solid #22303a;}
-    #fullPlayerArea { width:100%; height:100%; position:relative; background:#000; display:flex; align-items:center }
-    #videoPlayer, #webFrame { width:100%; height:100%; border:none; display:none; pointer-events: none; }
+    /* Ajuste de tamaño del video en modo normal */
+    .video-container{ background:#000; border-radius:12px; position:relative; overflow:hidden; width:100%; aspect-ratio: 16 / 9; border:1px solid #22303a; margin-top: 10px; }
+    #fullPlayerArea { width:100%; height:100%; position:relative; display:flex; align-items:center }
+    #videoPlayer, #webFrame { width:100%; height:100%; border:none; display:none; }
   </style>
 
   <script type="importmap">{ "imports": { "hls.js": "https://esm.sh/hls.js@1.4.12" } }</script>
@@ -70,7 +64,7 @@
   <div id="vr-layer">
     <div id="vr-divider"></div>
     <div id="vr-click-surface"></div>
-    <button id="btn-exit-vr">SALIR VR</button>
+    <button id="btn-exit-vr" onclick="window.toggleVR()">SALIR VR</button>
     <a-scene embedded loading-screen="enabled:false" vr-mode-ui="enabled:false">
       <a-entity camera look-controls position="0 1.6 0">
         <a-entity id="vr-display-container" position="0 0 -3.6">
@@ -83,7 +77,8 @@
   </div>
 
   <div class="container">
-    <h1 style="text-align:center; color:var(--accent); font-size:22px">IPTV VR Pro</h1>
+    <h1 style="text-align:center; color:var(--accent); font-size:22px; margin-top:10px">IPTV VR Pro</h1>
+    
     <div class="input-section">
       <input id="nameIn" type="text" placeholder="Nombre..." />
       <input id="urlIn" type="text" placeholder="URL M3U8 o YouTube..." />
@@ -93,7 +88,7 @@
       <button onclick="window.importM3U()" class="btn-m3u">M3U URL</button>
     </div>
 
-    <div style="display:flex; justify-content:space-between; margin-bottom:8px">
+    <div style="display:flex; justify-content:space-between; margin: 10px 0;">
         <button onclick="window.toggleFS()">FULLSCREEN</button>
         <button onclick="window.toggleVR()" class="btn-vr">MODO VR</button>
         <button onclick="window.clearAll()" class="btn-clear">Limpiar Todo</button>
@@ -114,11 +109,6 @@
   <script type="module">
     import Hls from "hls.js";
 
-    // Registro de Service Worker para que sea instalable
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js').catch(() => {});
-    }
-
     const state = JSON.parse(localStorage.getItem('iptv_vr_final')) || { channels: [], current: -1, eyeGap: 2.15 };
     const video = document.getElementById('videoPlayer');
     const iframe = document.getElementById('webFrame');
@@ -127,11 +117,9 @@
 
     window.saveState = () => localStorage.setItem('iptv_vr_final', JSON.stringify(state));
 
-    // --- REPRODUCCIÓN ---
     window.playUrl = async (rawUrl, index) => {
       if(hls) { hls.destroy(); hls = null; }
-      video.pause(); video.src = "";
-      iframe.src = "";
+      video.pause(); video.src = ""; iframe.src = "";
       state.current = index; window.saveState(); render();
 
       if (rawUrl.includes('youtube.com') || rawUrl.includes('youtu.be')) {
@@ -148,7 +136,7 @@
       showFeedback(state.channels[index].title);
     };
 
-    // --- LÓGICA HÍBRIDA (MOUSE + TOUCH) ---
+    // --- LÓGICA DE CONTROL (IZQ: ATRÁS | CEN: PAUSA | DER: SIGUIENTE) ---
     let startY = 0, startX = 0, isDragging = false;
 
     const pointerDown = (e) => {
@@ -162,21 +150,29 @@
         const endY = e.clientY || (e.changedTouches ? e.changedTouches[0].clientY : 0);
         const endX = e.clientX || (e.changedTouches ? e.changedTouches[0].clientX : 0);
         const diffY = startY - endY;
+        const width = window.innerWidth;
+        const xPosPercent = (startX / width) * 100;
 
-        if (Math.abs(diffY) > 30) {
+        if (Math.abs(diffY) > 50) {
             const delta = diffY > 0 ? 0.08 : -0.08;
             state.eyeGap = Math.max(1.0, Math.min(4.5, state.eyeGap + delta));
             updateScreens();
             showFeedback(`Calibración: ${state.eyeGap.toFixed(2)}`);
             window.saveState();
-        } else {
+        } else if (Math.abs(startY - endY) < 10) {
             if (state.channels.length === 0) return;
-            if (startX > window.innerWidth / 2) {
-                state.current = (state.current + 1) % state.channels.length;
-            } else {
+            if (xPosPercent < 30) {
                 state.current = (state.current - 1 + state.channels.length) % state.channels.length;
+                window.playUrl(state.channels[state.current].url, state.current);
+            } else if (xPosPercent > 70) {
+                state.current = (state.current + 1) % state.channels.length;
+                window.playUrl(state.channels[state.current].url, state.current);
+            } else {
+                if (video.style.display !== "none") {
+                    if (video.paused) { video.play(); showFeedback("PLAY"); }
+                    else { video.pause(); showFeedback("PAUSA"); }
+                }
             }
-            window.playUrl(state.channels[state.current].url, state.current);
         }
         isDragging = false;
     };
@@ -196,15 +192,6 @@
         el.addEventListener('touchend', pointerUp, {passive: true});
     });
 
-    // --- LISTA Y UTILIDADES ---
-    window.addUrl = () => {
-      const u = document.getElementById('urlIn'), n = document.getElementById('nameIn');
-      if(u.value.trim()){
-        state.channels.push({title: n.value.trim() || "Canal", url: u.value.trim()});
-        u.value = ""; n.value = ""; window.saveState(); render();
-      }
-    };
-
     window.handleFile = (input) => {
         const reader = new FileReader();
         reader.onload = (e) => {
@@ -220,11 +207,39 @@
         reader.readAsText(input.files[0]);
     };
 
+    window.addUrl = () => {
+      const u = document.getElementById('urlIn'), n = document.getElementById('nameIn');
+      if(u.value.trim()){
+        state.channels.push({title: n.value.trim() || "Canal", url: u.value.trim()});
+        u.value = ""; n.value = ""; window.saveState(); render();
+      }
+    };
+
+    window.importM3U = async () => {
+        const url = prompt("URL M3U:");
+        if (url) {
+            try {
+                const res = await fetch(url);
+                const text = await res.text();
+                const lines = text.split('\n');
+                lines.forEach((line, i) => {
+                    if (line.startsWith('#EXTINF:')) {
+                        const nextLine = lines[i+1]?.trim();
+                        if(nextLine && !nextLine.startsWith('#')) state.channels.push({title: line.split(',')[1] || "Canal", url: nextLine});
+                    }
+                });
+                window.saveState(); render();
+            } catch(e) { alert("Error al cargar URL."); }
+        }
+    };
+
     window.toggleVR = () => {
       document.body.classList.toggle('is-vr');
       if (document.body.classList.contains('is-vr')) {
-          document.documentElement.requestFullscreen?.();
+          document.documentElement.requestFullscreen?.().catch(()=>{});
           updateScreens();
+      } else {
+          if(document.fullscreenElement) document.exitFullscreen();
       }
     };
 
@@ -250,7 +265,6 @@
          </div>`).join('') || '<div style="padding:15px; color:#666">No hay canales</div>';
     }
 
-    document.getElementById('btn-exit-vr').onclick = window.toggleVR;
     render();
   </script>
 </body>
