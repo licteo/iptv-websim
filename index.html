@@ -19,7 +19,6 @@
     
     html, body { margin:0; padding:0; background:var(--bg); color:#e6eef6; height: 100%; overflow: hidden; }
     
-    /* Contenedor con scroll propio para evitar bloqueos en GitHub */
     .container { height: 100%; overflow-y: auto; -webkit-overflow-scrolling: touch; max-width:980px; margin:0 auto; padding:15px; display: flex; flex-direction: column; position: relative; z-index: 1; }
     body.is-vr .container { display: none; }
     
@@ -60,9 +59,9 @@
     <button id="btn-exit-vr" onclick="window.toggleVR()">SALIR VR</button>
     <a-scene embedded loading-screen="enabled:false" vr-mode-ui="enabled:false">
       <a-entity camera look-controls="enabled: false" position="0 1.6 0">
-        <a-entity id="vr-display-container" position="0 0 -3.6">
-          <a-video id="screenLeft" src="#videoPlayer" width="4.8" height="2.7" material="shader:flat"></a-video>
-          <a-video id="screenRight" src="#videoPlayer" width="4.8" height="2.7" material="shader:flat"></a-video>
+        <a-entity id="vr-display-container" position="0 0 -4.0">
+          <a-video id="screenLeft" src="#videoPlayer" width="3.8" height="2.13" material="shader:flat"></a-video>
+          <a-video id="screenRight" src="#videoPlayer" width="3.8" height="2.13" material="shader:flat"></a-video>
         </a-entity>
       </a-entity>
       <a-sky color="#000"></a-sky>
@@ -97,7 +96,6 @@
   <script type="module">
     import Hls from "hls.js";
 
-    // REGISTRO DEL SERVICE WORKER EXISTENTE EN TU GITHUB
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js')
@@ -106,6 +104,7 @@
       });
     }
 
+    // Mejora 3: Valor inicial 1.90 para tu IPD específico
     const state = JSON.parse(localStorage.getItem('iptv_vr_final')) || { channels: [], current: -1, eyeGap: 1.90 };
     const video = document.getElementById('videoPlayer');
     const iframe = document.getElementById('webFrame');
@@ -133,7 +132,6 @@
       showFeedback(state.channels[index].title);
     };
 
-    // --- CONTROLES GITHUB FIX ---
     let startY = 0, startX = 0, isDragging = false;
     const handleStart = (e) => {
         isDragging = true;
@@ -151,7 +149,8 @@
 
         if (Math.abs(diffY) > 60) {
             const delta = diffY > 0 ? 0.08 : -0.08;
-            state.eyeGap = Math.max(1.0, Math.min(4.5, state.eyeGap + delta));
+            // Limitamos el rango para que no se deforme demasiado
+            state.eyeGap = Math.max(1.50, Math.min(3.00, state.eyeGap + delta));
             updateScreens();
             showFeedback(`Calibrar: ${state.eyeGap.toFixed(2)}`);
             window.saveState();
@@ -173,11 +172,15 @@
         isDragging = false;
     };
 
+    // Mejora 4: Función de actualización con escala bloqueada
     function updateScreens() {
         const L = document.getElementById('screenLeft'), R = document.getElementById('screenRight');
         if (L && R) {
             L.setAttribute('position', `-${state.eyeGap} 0 0`);
             R.setAttribute('position', `${state.eyeGap} 0 0`);
+            // Mantenemos el tamaño fijo para evitar el efecto de "crecimiento"
+            L.setAttribute('width', '3.8');
+            R.setAttribute('width', '3.8');
         }
     }
 
@@ -228,8 +231,6 @@
       if (!document.fullscreenElement) area.requestFullscreen();
       else document.exitFullscreen();
     };
-
-    window.clearAll = () => { if(confirm("¿Borrar todo?")) { state.channels = []; state.current = -1; window.saveState(); render(); } };
 
     function showFeedback(txt) { 
         feedback.textContent = txt; feedback.style.display = "block"; 
