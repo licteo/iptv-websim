@@ -3,11 +3,16 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover" />
-  <title>IPTV VR Pro - GitHub Edition</title>
+  <title>IPTV VR Pro</title>
   
+  <meta name="theme-color" content="#051019">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="IPTV VR">
   
+  <link rel="manifest" href="data:application/manifest+json,{%22name%22:%22IPTV%20VR%20Pro%22,%22short_name%22:%22IPTVVR%22,%22start_url%22:%22.%22,%22display%22:%22standalone%22,%22background_color%22:%22#051019%22,%22theme_color%22:%22#00d4ff%22,%22icons%22:[{%22src%22:%22https://cdn-icons-png.flaticon.com/512/716/716429.png%22,%22sizes%22:%22512x512%22,%22type%22:%22image/png%22}]} border=">
+
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
 
   <style>
@@ -17,7 +22,6 @@
     html, body { margin:0; padding:0; background:var(--bg); color:#e6eef6; height: 100%; overflow: hidden; }
     
     .container { height: 100%; overflow-y: auto; -webkit-overflow-scrolling: touch; max-width:980px; margin:0 auto; padding:15px; display: flex; flex-direction: column; position: relative; z-index: 1; }
-    
     body.is-vr .container { display: none; }
     
     .input-section{display:flex; gap:8px; margin:8px 0; flex-wrap:wrap}
@@ -33,15 +37,10 @@
     .channel-item{padding:12px; border-bottom:1px solid #16202a; cursor:pointer; display:flex; justify-content:space-between; align-items:center}
     .channel-item.active{border-left:4px solid var(--accent); background:#111b25}
     
-    /* CAPA VR MEJORADA PARA GITHUB */
     #vr-layer { display:none; position:fixed; inset:0; z-index:10000; background:#000}
     body.is-vr #vr-layer { display:block }
-    
     #vr-divider { position: fixed; left: 50%; top: 0; bottom: 0; width: 2px; background: rgba(255, 255, 255, 0.4); z-index: 10002; transform: translateX(-50%); pointer-events: none; }
-    
-    /* Esta es la superficie que detectará los clics en VR siempre */
     #vr-click-surface { position:fixed; inset:0; z-index:10005; background: transparent; cursor: pointer; touch-action: none; }
-
     #btn-exit-vr { position:fixed; top:20px; right:20px; z-index:10010; background:var(--danger); color:white; padding:15px 25px; border-radius:30px; font-weight:bold; border:2px solid white; }
     
     #feedback{ position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:rgba(0,0,0,0.8); color:var(--accent); padding:20px 40px; border-radius:40px; display:none; z-index:20000; border:2px solid var(--accent); font-size: 24px; font-weight: bold; pointer-events:none; }
@@ -99,6 +98,14 @@
   <script type="module">
     import Hls from "hls.js";
 
+    // REGISTRO DE SERVICE WORKER PARA HABILITAR INSTALACIÓN
+    if ('serviceWorker' in navigator) {
+      const swCode = `self.addEventListener('fetch', function(e){ e.respondWith(fetch(e.request)); });`;
+      const blob = new Blob([swCode], {type: 'text/javascript'});
+      const url = URL.createObjectURL(blob);
+      navigator.serviceWorker.register(url);
+    }
+
     const state = JSON.parse(localStorage.getItem('iptv_vr_final')) || { channels: [], current: -1, eyeGap: 2.15 };
     const video = document.getElementById('videoPlayer');
     const iframe = document.getElementById('webFrame');
@@ -126,45 +133,36 @@
       showFeedback(state.channels[index].title);
     };
 
-    // --- SISTEMA DE CONTROL UNIFICADO (FIJO PARA GITHUB) ---
     let startY = 0, startX = 0, isDragging = false;
-
     const handleStart = (e) => {
         isDragging = true;
         const touch = e.touches ? e.touches[0] : e;
-        startY = touch.clientY;
-        startX = touch.clientX;
+        startY = touch.clientY; startX = touch.clientX;
     };
 
     const handleEnd = (e) => {
         if (!isDragging) return;
         const touch = e.changedTouches ? e.changedTouches[0] : e;
-        const endY = touch.clientY;
-        const endX = touch.clientX;
-        const diffY = startY - endY;
-        const diffX = startX - endX;
+        const endY = touch.clientY; const endX = touch.clientX;
+        const diffY = startY - endY; const diffX = startX - endX;
         const width = window.innerWidth;
         const xPosPercent = (startX / width) * 100;
 
-        // 1. GESTO VERTICAL: Calibración de distancia
         if (Math.abs(diffY) > 60) {
             const delta = diffY > 0 ? 0.08 : -0.08;
             state.eyeGap = Math.max(1.0, Math.min(4.5, state.eyeGap + delta));
             updateScreens();
             showFeedback(`Distancia: ${state.eyeGap.toFixed(2)}`);
             window.saveState();
-        } 
-        // 2. TOQUE SIMPLE: Control de reproducción/canales
-        else if (Math.abs(diffY) < 20 && Math.abs(diffX) < 20) {
+        } else if (Math.abs(diffY) < 20 && Math.abs(diffX) < 20) {
             if (state.channels.length === 0) return;
-            
-            if (xPosPercent < 30) { // IZQUIERDA: Atrás
+            if (xPosPercent < 30) {
                 state.current = (state.current - 1 + state.channels.length) % state.channels.length;
                 window.playUrl(state.channels[state.current].url, state.current);
-            } else if (xPosPercent > 70) { // DERECHA: Siguiente
+            } else if (xPosPercent > 70) {
                 state.current = (state.current + 1) % state.channels.length;
                 window.playUrl(state.channels[state.current].url, state.current);
-            } else { // CENTRO: Pausa/Play
+            } else {
                 if (video.style.display !== "none") {
                     if (video.paused) { video.play(); showFeedback("PLAY"); }
                     else { video.pause(); showFeedback("PAUSA"); }
@@ -182,7 +180,6 @@
         }
     }
 
-    // Vincular eventos a las dos superficies (Normal y VR)
     const surfaces = [document.getElementById('normal-click-surface'), document.getElementById('vr-click-surface')];
     surfaces.forEach(el => {
         el.addEventListener('mousedown', handleStart);
@@ -191,7 +188,6 @@
         el.addEventListener('touchend', handleEnd, {passive: false});
     });
 
-    // --- FUNCIONES DE CARGA ---
     window.handleFile = (input) => {
         const reader = new FileReader();
         reader.onload = (e) => {
@@ -220,8 +216,7 @@
       const scene = document.querySelector('a-scene');
       if (isVR) {
           document.documentElement.requestFullscreen?.().catch(()=>{});
-          if(scene) scene.play();
-          updateScreens();
+          if(scene) scene.play(); updateScreens();
       } else {
           if(document.fullscreenElement) document.exitFullscreen();
           if(scene) scene.pause();
@@ -251,11 +246,7 @@
     }
 
     render();
-    
-    // Inicialización de A-Frame
-    document.querySelector('a-scene').addEventListener('loaded', function () {
-        this.pause(); 
-    });
+    document.querySelector('a-scene').addEventListener('loaded', function () { this.pause(); });
   </script>
 </body>
 </html>
