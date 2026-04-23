@@ -3,31 +3,44 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover" />
-  <title>IPTV VR Pro - Audio & YT Fix</title>
+  <title>IPTV VR Pro - Final Fix</title>
   
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#051019">
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
 
   <style>
-    :root{--bg:#051019;--accent:#00d4ff;--danger:#ff4444;--success:#39ff14}
-    *{box-sizing:border-box;font-family:sans-serif}
+    :root{--bg:#051019;--accent:#00d4ff;--danger:#ff4444;--btn-vr:rgba(0,0,0,0.6)}
+    *{box-sizing:border-box;font-family:sans-serif; touch-action: manipulation;}
     html, body { margin:0; padding:0; background:var(--bg); color:#e6eef6; height: 100%; overflow: hidden; }
-    .container { height: 100%; overflow-y: auto; max-width:980px; margin:0 auto; padding:15px; display: flex; flex-direction: column; position: relative; z-index: 1; }
+    
+    /* Interfaz Base */
+    .container { height: 100%; overflow-y: auto; max-width:900px; margin:0 auto; padding:10px; display: flex; flex-direction: column; }
     body.is-vr .container { display: none; }
-    .input-section{display:flex; gap:8px; margin:8px 0; flex-wrap:wrap}
-    input{padding:12px; border-radius:8px; border:1px solid #22303a; background:#0b1115; color:#fff; font-size:16px}
+    
+    .input-section{display:flex; gap:5px; margin-bottom:10px;}
+    input{padding:12px; border-radius:8px; border:1px solid #22303a; background:#0b1115; color:#fff; flex: 1;}
     button{border:none; padding:12px; border-radius:8px; font-weight:bold; cursor:pointer;}
-    .channel-list { background:#071018; border-radius:10px; padding:5px; max-height: 300px; overflow-y: auto; border:1px solid #16202a; margin-bottom:15px; }
+    
+    .channel-list { background:#071018; border-radius:10px; max-height: 200px; overflow-y: auto; border:1px solid #16202a; margin-bottom:10px; }
     .channel-item{padding:12px; border-bottom:1px solid #16202a; cursor:pointer; display:flex; justify-content:space-between; align-items:center}
     .channel-item.active{border-left:4px solid var(--accent); background:#111b25}
+    
+    /* Video Area */
+    .video-wrapper { position: relative; width: 100%; aspect-ratio: 16/9; background: #000; border-radius: 12px; overflow: hidden; }
+    #videoPlayer, #webFrame { width:100%; height:100%; position: absolute; top:0; left:0; border:none; display:none; }
+    
+    /* Modo VR */
     #vr-layer { display:none; position:fixed; inset:0; z-index:10000; background:#000}
     body.is-vr #vr-layer { display:block }
-    #vr-divider { position: fixed; left: 50%; top: 0; bottom: 0; width: 2px; background: rgba(255,255,255,0.3); z-index: 10002; transform: translateX(-50%); }
-    #vr-click-surface { position:fixed; inset:0; z-index:10005; background: transparent; touch-action: none; }
-    #feedback{ position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:rgba(0,0,0,0.8); color:var(--accent); padding:20px 40px; border-radius:40px; display:none; z-index:20000; border:2px solid var(--accent); font-size: 24px; font-weight: bold; }
-    .video-container{ background:#000; border-radius:12px; position:relative; overflow:hidden; width:100%; aspect-ratio: 16 / 9; border:1px solid #22303a; margin-top: 10px; }
-    #videoPlayer, #webFrame { width:100%; height:100%; border:none; display:none; }
+    
+    /* Botones VR Mejorados */
+    .vr-ctrl { position: fixed; z-index: 10010; background: var(--btn-vr); color: white; border: 2px solid var(--accent); border-radius: 50%; width: 70px; height: 70px; font-size: 20px; display: flex; align-items: center; justify-content: center; }
+    .btn-prev { left: 30px; top: 50%; transform: translateY(-50%); }
+    .btn-next { right: 30px; top: 50%; transform: translateY(-50%); }
+    .btn-vol-up { left: 60%; bottom: 40px; }
+    .btn-vol-down { right: 60%; bottom: 40px; }
+    .btn-exit { top: 20px; right: 20px; border-radius: 20px; width: auto; padding: 10px 20px; background: var(--danger); border-color: white; }
+    
+    #feedback{ position:fixed; top:15%; left:50%; transform:translateX(-50%); background:var(--accent); color:#000; padding:8px 25px; border-radius:20px; display:none; z-index:20000; font-weight: bold; }
   </style>
 
   <script type="importmap">{ "imports": { "hls.js": "https://esm.sh/hls.js@1.4.12" } }</script>
@@ -37,9 +50,12 @@
   <div id="feedback"></div>
 
   <div id="vr-layer">
-    <div id="vr-divider"></div>
-    <div id="vr-click-surface"></div>
-    <button id="btn-exit-vr" style="position:fixed; top:20px; right:20px; z-index:10010; background:var(--danger); color:white; border-radius:30px;" onclick="window.toggleVR()">SALIR VR</button>
+    <button class="vr-ctrl btn-prev" onclick="window.changeChannel(-1)">❮</button>
+    <button class="vr-ctrl btn-next" onclick="window.changeChannel(1)">❯</button>
+    <button class="vr-ctrl btn-vol-up" onclick="window.changeVol(0.1)">V+</button>
+    <button class="vr-ctrl btn-vol-down" onclick="window.changeVol(-0.1)">V-</button>
+    <button class="vr-ctrl btn-exit" onclick="window.toggleVR()">SALIR VR</button>
+    
     <a-scene embedded loading-screen="enabled:false" vr-mode-ui="enabled:false">
       <a-entity camera look-controls="enabled: false" position="0 1.6 0">
         <a-entity id="vr-display-container" position="0 0 -3.6">
@@ -52,17 +68,18 @@
   </div>
 
   <div class="container">
-    <h1 style="text-align:center; color:var(--accent);">IPTV VR Pro</h1>
+    <h2 style="text-align:center; color:var(--accent); margin:10px 0;">IPTV VR Pro</h2>
+    
     <div class="input-section">
-      <input id="nameIn" type="text" placeholder="Nombre..." style="flex:1"/>
-      <input id="urlIn" type="text" placeholder="URL..." style="flex:2"/>
+      <input id="urlIn" type="text" placeholder="Pega URL aquí..." />
       <button onclick="window.addUrl()" style="background:var(--accent)">AÑADIR</button>
     </div>
-    <div style="display:flex; justify-content:space-between; margin: 10px 0;">
-        <button onclick="window.toggleVR()" style="background:#ff00ff; color:#fff; flex:1; margin-left:5px">MODO VR</button>
-    </div>
+    
+    <button onclick="window.toggleVR()" style="background:#ff00ff; color:#fff; width:100%; margin-bottom:10px; font-size:18px;">ENTRAR MODO VR</button>
+    
     <div class="channel-list" id="list"></div>
-    <div class="video-container" id="normalPlayerArea">
+    
+    <div class="video-wrapper">
         <video id="videoPlayer" crossorigin="anonymous" playsinline></video>
         <iframe id="webFrame" allow="autoplay; fullscreen"></iframe>
     </div>
@@ -71,19 +88,14 @@
   <script type="module">
     import Hls from "hls.js";
 
-    const defaultChannels = [
-      {title:"YouTube Live 1", url:"https://www.youtube.com/embed/vuTY4FDAbpA"},
-      {title:"3ABN Kids", url:"https://3abn.bozztv.com/3abn2/Kids_live/smil:Kids_live.smil/playlist.m3u8"},
+    // Canales por defecto integrados
+    const defaults = [
+      {title:"YouTube Live 1", url:"https://youtu.be/vuTY4FDAbpA"},
       {title:"3ABN Latino", url:"https://3abn.bozztv.com/3abn2/Lat_live/smil:Lat_live.smil/playlist.m3u8"},
-      {title:"Spirit TV", url:"https://cdnlive.myspirit.tv/LS-ATL-43240-2/index.m3u8"},
-      {title:"TVS Retro", url:"https://cdn.streamhispanatv.net:3531/live/tvsretrogtlive.m3u8"},
-      {title:"Retro Plus TV", url:"https://scl.edge.grupoz.cl/retroplustvuno/live/playlist.m3u8"},
-      {title:"Canela TV", url:"https://amg00658-amg00658c8-canelatv-international-7227.playouts.now.amagi.tv/playlist/amg00658-canelamediafast-cinemalt-canelatvinternational/playlist.m3u8"},
-      {title:"RT Español", url:"https://rt-esp.rttv.com/live/rtesp/playlist_800Kb.m3u8"},
-      {title:"DW Español", url:"https://dwamdstream104.akamaized.net/hls/live/2015530/dwstream104/index.m3u8"}
+      {title:"RT Español", url:"https://rt-esp.rttv.com/live/rtesp/playlist_800Kb.m3u8"}
     ];
 
-    const state = JSON.parse(localStorage.getItem('iptv_vr_final')) || { channels: defaultChannels, current: -1, eyeGap: 1.95, volume: 1.0 };
+    const state = JSON.parse(localStorage.getItem('iptv_vr_final')) || { channels: defaults, current: 0, eyeGap: 1.95, volume: 1.0 };
     const video = document.getElementById('videoPlayer');
     const iframe = document.getElementById('webFrame');
     const feedback = document.getElementById('feedback');
@@ -91,110 +103,92 @@
 
     window.saveState = () => localStorage.setItem('iptv_vr_final', JSON.stringify(state));
 
-    window.playUrl = async (rawUrl, index) => {
+    window.playUrl = (rawUrl, index) => {
+      // 1. Limpieza total de procesos anteriores
       if(hls) { hls.destroy(); hls = null; }
-      video.pause(); video.src = ""; iframe.src = "";
-      state.current = index; window.saveState(); render();
+      video.pause(); 
+      video.src = ""; 
+      video.load();
+      iframe.src = "about:blank";
+      iframe.style.display = "none";
+      video.style.display = "none";
 
-      // Fix YouTube: Detectar si es link de YT y convertir a Embed
+      state.current = index;
+      window.saveState();
+      render();
+
       const ytMatch = rawUrl.match(/(?:youtu\.be\/|youtube\.com\/(?:v\/|u\/\w\/|embed\/|watch\?v=))([^#\&\?]*)/);
-      
+      const isVR = document.body.classList.contains('is-vr');
+
       if (ytMatch && ytMatch[1]) {
-        video.style.display = "none"; iframe.style.display = "block";
-        iframe.src = `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&mute=0&rel=0`;
+        if (isVR) {
+            alert("YouTube no es compatible con la visión 3D en este modo. Usa canales .m3u8 para VR.");
+            window.toggleVR();
+        }
+        iframe.style.display = "block";
+        iframe.src = `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&mute=0`;
         showFeedback("YouTube Mode");
       } else {
-        iframe.style.display = "none"; video.style.display = "block";
+        video.style.display = "block";
         if (Hls.isSupported()) {
           hls = new Hls(); hls.loadSource(rawUrl); hls.attachMedia(video);
-          hls.on(Hls.Events.MANIFEST_PARSED, () => {
-              video.volume = state.volume;
-              video.play().catch(()=>{});
-          });
-        } else { video.src = rawUrl; video.volume = state.volume; video.play().catch(()=>{}); }
+          hls.on(Hls.Events.MANIFEST_PARSED, () => { video.volume = state.volume; video.play(); });
+        } else { video.src = rawUrl; video.volume = state.volume; video.play(); }
         showFeedback(state.channels[index].title);
       }
     };
 
-    // --- CONTROLES MEJORADOS (IPD Y VOLUMEN) ---
-    let startY = 0, startX = 0;
-    const handleStart = (e) => {
-        const touch = e.touches ? e.touches[0] : e;
-        startY = touch.clientY; startX = touch.clientX;
+    window.changeChannel = (dir) => {
+        let next = (state.current + dir + state.channels.length) % state.channels.length;
+        window.playUrl(state.channels[next].url, next);
     };
 
-    const handleEnd = (e) => {
-        const touch = e.changedTouches ? e.changedTouches[0] : e;
-        const diffY = startY - touch.clientY;
-        const diffX = startX - touch.clientX;
-        const width = window.innerWidth;
-        const xPosPercent = (startX / width) * 100;
+    window.changeVol = (delta) => {
+        state.volume = Math.max(0, Math.min(1, state.volume + delta));
+        video.volume = state.volume;
+        showFeedback(`Volumen: ${Math.round(state.volume * 100)}%`);
+        window.saveState();
+    };
 
-        // Deslizar arriba/abajo en el centro: Volumen
-        if (Math.abs(diffY) > 50 && xPosPercent > 30 && xPosPercent < 70) {
-            const volDelta = diffY > 0 ? 0.1 : -0.1;
-            state.volume = Math.max(0, Math.min(1, state.volume + volDelta));
-            video.volume = state.volume;
-            showFeedback(`Volumen: ${Math.round(state.volume * 100)}%`);
-            window.saveState();
-        } 
-        // Deslizar en los lados: IPD (Calibración)
-        else if (Math.abs(diffY) > 50 && (xPosPercent <= 30 || xPosPercent >= 70)) {
-            const gapDelta = diffY > 0 ? 0.05 : -0.05;
-            state.eyeGap = Math.max(1.50, Math.min(2.80, state.eyeGap + gapDelta));
-            updateScreens();
-            showFeedback(`Calibrar: ${state.eyeGap.toFixed(2)}`);
-            window.saveState();
-        }
-        // Toques laterales: Cambio de canal
-        else if (Math.abs(diffY) < 20 && Math.abs(diffX) < 20) {
-            if (xPosPercent < 30) {
-                state.current = (state.current - 1 + state.channels.length) % state.channels.length;
-                window.playUrl(state.channels[state.current].url, state.current);
-            } else if (xPosPercent > 70) {
-                state.current = (state.current + 1) % state.channels.length;
-                window.playUrl(state.channels[state.current].url, state.current);
+    window.toggleVR = () => {
+        const isVR = document.body.classList.toggle('is-vr');
+        if(isVR) {
+            // Si intentas entrar a VR con YouTube, avisar
+            const currentUrl = state.channels[state.current]?.url || "";
+            if (currentUrl.includes("youtu")) {
+                alert("Para VR usa canales de TV directos. YouTube solo funciona en modo normal.");
+                document.body.classList.remove('is-vr');
+                return;
             }
+            updateScreens();
+            video.play().catch(()=>{});
         }
     };
 
     function updateScreens() {
-        const L = document.getElementById('screenLeft'), R = document.getElementById('screenRight');
-        if (L && R) {
-            L.setAttribute('position', `-${state.eyeGap} 0 0`);
-            R.setAttribute('position', `${state.eyeGap} 0 0`);
-        }
+        document.getElementById('screenLeft').setAttribute('position', `-${state.eyeGap} 0 0`);
+        document.getElementById('screenRight').setAttribute('position', `${state.eyeGap} 0 0`);
     }
 
-    [document.getElementById('vr-click-surface')].forEach(el => {
-        el.addEventListener('touchstart', handleStart);
-        el.addEventListener('touchend', handleEnd);
-    });
-
-    window.toggleVR = () => {
-      const isVR = document.body.classList.toggle('is-vr');
-      if (isVR) { updateScreens(); video.play().catch(()=>{}); }
-    };
-
     window.addUrl = () => {
-      const u = document.getElementById('urlIn'), n = document.getElementById('nameIn');
+      const u = document.getElementById('urlIn');
       if(u.value.trim()){
-        state.channels.push({title: n.value.trim() || "Canal", url: u.value.trim()});
-        window.saveState(); render();
+        state.channels.push({title: "Canal Nuevo", url: u.value.trim()});
+        u.value = ""; window.saveState(); render();
       }
     };
 
     function showFeedback(txt) { 
         feedback.textContent = txt; feedback.style.display = "block"; 
-        setTimeout(() => feedback.style.display = "none", 1200); 
+        setTimeout(() => feedback.style.display = "none", 1500); 
     }
 
     function render() {
       const listDiv = document.getElementById('list');
       listDiv.innerHTML = state.channels.map((ch, i) => `
         <div class="channel-item ${state.current === i ? 'active' : ''}" onclick="window.playUrl('${ch.url}', ${i})">
-            <b>${ch.title}</b>
-            <button onclick="event.stopPropagation(); state.channels.splice(${i}, 1); window.saveState(); render();">X</button>
+            <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:80%">${ch.title}</span>
+            <button onclick="event.stopPropagation(); state.channels.splice(${i}, 1); window.saveState(); render();" style="background:#444; color:white; padding:5px 10px;">X</button>
         </div>`).join('');
     }
 
